@@ -1,12 +1,10 @@
 namespace LovePandas.Core
 {
-    /// Стартовые ориентиры баланса из GDD, раздел 7. Подбираются на тестах.
+    /// Лимиты для подсказок в форме. Настоящая проверка — на сервере (server/src/game.ts).
     public static class Economy
     {
-        public const int StartCoins = 100;
-        public const int DailyBonus = 10;
-        public const int MinReward = 1;
         public const int MaxReward = 9999;
         public const int MaxQuestTextLength = 140;
+        public const int MaxNameLength = 20;
     }
 }

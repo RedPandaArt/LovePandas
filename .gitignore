@@ -33,6 +33,10 @@
 *.opendb
 *.VC.db
 
+# Сервер
+/server/data/
+/server/node_modules/
+
 # Прочее
 crashlytics-buildid.txt
 sysinfo.txt

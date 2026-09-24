@@ -56,7 +56,7 @@ namespace LovePandas.View
         }
 
         /// Надеть всё по данным игрока; лишнее снять.
-        public void Apply(Player player)
+        public void Apply(Player player, System.Func<string, ItemDef> lookup)
         {
             foreach (Slot slot in System.Enum.GetValues(typeof(Slot)))
             {
@@ -67,7 +67,7 @@ namespace LovePandas.View
                     if (current != null) Destroy(current);
                     worn.Remove(slot);
                 }
-                if (itemId != null) worn[slot] = MakeItem(ItemCatalog.Get(itemId));
+                if (itemId != null) worn[slot] = MakeItem(lookup(itemId));
             }
         }
 
@@ -86,10 +86,10 @@ namespace LovePandas.View
         GameObject MakeItem(ItemDef item)
         {
             if (item == null) return null;
-            var color = RarityColor(item.rarity);
-            var socket = sockets[item.slot];
+            var color = RarityColor(item.Rarity);
+            var socket = sockets[item.Slot];
             GameObject go;
-            switch (item.slot)
+            switch (item.Slot)
             {
                 case Slot.Head:  go = Part(PrimitiveType.Cylinder, socket, Vector3.zero, new Vector3(0.6f, 0.12f, 0.6f), color); break;
                 case Slot.Face:  go = Part(PrimitiveType.Cube, socket, Vector3.zero, new Vector3(0.7f, 0.12f, 0.05f), color); break;

@@ -168,6 +168,33 @@
 }
 .hidden { display: none; }
 
+/* ---------- Первый вход ---------- */
+.onboard-card { height: auto; padding-bottom: 72px; }
+.onboard-card > .sheet-title { margin-bottom: 20px; white-space: normal; }
+.hint { font-size: 32px; color: rgb(150, 110, 90); margin: 18px 0 12px 0; white-space: normal; }
+.action-btn.big { height: 120px; margin: 20px 0 0 0; font-size: 40px; border-radius: 40px; }
+.choice-row { flex-direction: row; justify-content: space-between; }
+.choice-btn {
+    width: 48%;
+    height: 140px;
+    border-radius: 36px;
+    border-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: rgb(255, 255, 255);
+    color: rgb(74, 46, 36);
+    font-size: 38px;
+    -unity-font-style: bold;
+}
+.choice-btn.selected { border-color: rgb(232, 110, 72); }
+.invite-code {
+    font-size: 110px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 12px;
+    color: rgb(232, 110, 72);
+    margin: 12px 0;
+}
+
 /* ---------- Монетка ---------- */
 .price { flex-direction: row; align-items: center; }
 .coin {

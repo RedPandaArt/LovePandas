@@ -1,0 +1,10 @@
+{
+  "name": "lovepandas-server",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node src/index.ts",
+    "test": "node --test test/*.test.ts"
+  }
+}

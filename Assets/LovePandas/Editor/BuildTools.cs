@@ -21,6 +21,8 @@ namespace LovePandas.Editor
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            // Пока сервер для тестов живёт на ПК по http. На Railway будет https — тогда вернуть NotAllowed.
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
 
             if (!File.Exists(ScenePath))
             {

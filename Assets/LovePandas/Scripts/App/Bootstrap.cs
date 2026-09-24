@@ -22,7 +22,11 @@ namespace LovePandas.App
             var character = CharacterView.Create(world);
             character.transform.localRotation = Quaternion.Euler(0, 180, 0);
 
-            var game = new GameService(new LocalStore());
+            // Адрес сервера — Resources/server_url.txt; для тестов на ПК -lpServer, -lpProfile (второй игрок
+            // на той же машине), -lpToken (войти готовым игроком).
+            var url = Args.Get("-lpServer") ?? Resources.Load<TextAsset>("server_url").text.Trim();
+            var api = new ApiClient(url, Args.Get("-lpProfile") ?? "default", Args.Get("-lpToken"));
+            var game = new GameService(api);
             var ui = new GameObject("UI").AddComponent<AppUI>();
             ui.Init(game, character, CreatePanel());
 

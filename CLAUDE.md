@@ -11,6 +11,21 @@
 - Рендер — URP. UI — UI Toolkit, собирается кодом.
 - Blender и ComfyUI есть на машине пользователя — для моделей и концептов.
 
+## Сервер (`server/`)
+
+Node 24 + TypeScript (запускается напрямую, без сборки) + встроенный `node:sqlite`. Зависимостей нет.
+**Все правила и монеты — только здесь**, клиент лишь вызывает API и показывает `state`.
+
+```
+cd server && npm test          # тесты логики (node:test, база в памяти)
+cd server && npm start         # :8787, база data/lovepandas.db (DB_PATH, PORT, TZ_OFFSET_MIN)
+```
+
+- `src/game.ts` — вся логика: регистрация, пара по коду, эскроу заданий, магазин, бонус, `state()`.
+- `src/index.ts` — HTTP-маршруты. Ответ на любое действие — `{ state }` или `{ error }`.
+- `GET /state?since=<version>` отдаёт 304, если у пары ничего не менялось — клиент опрашивает раз в 4 с.
+- Деплой на Railway — только по команде пользователя (сервис ещё не создан).
+
 ## Устройство кода
 
 ```
@@ -23,8 +38,10 @@ Assets/LovePandas/
 ```
 
 - Сцена собирается в `Bootstrap` через `RuntimeInitializeOnLoadMethod` — сцена в редакторе пустая, в git не конфликтует.
-- Все операции с монетами — только в `GameService`. С Firebase они переедут в Cloud Functions, клиент будет лишь вызывать их.
-- Хранилище за интерфейсом `IGameStore`. Сейчас `LocalStore` (JSON в `persistentDataPath`) и режим «два игрока на одном телефоне» — кнопка ⇄ вверху.
+- `Core/ApiClient` — HTTP к серверу, анонимный токен в PlayerPrefs. `Core/GameService` — состояние с сервера и вызовы действий.
+- Адрес сервера — `Resources/server_url.txt` (сейчас IP ПК в локальной сети). Android пускает http, пока
+  в `BuildTools.Setup` стоит `InsecureHttpOption.AlwaysAllowed` — убрать, когда сервер переедет на https.
+- Тестовые ключи ПК-сборки: `-lpServer http://127.0.0.1:8787`, `-lpProfile <имя>` (второй игрок), `-lpToken <токен>`.
 
 ## Сборка
 
@@ -41,6 +58,7 @@ APK кладётся в `Builds/LovePandas.apk` (папка в `.gitignore`).
 Грабли:
 - Цвет задаётся через `View.Materials` от `Resources/Materials/Base.mat`. Стандартный материал примитива в сборке пурпурный — шейдер вырезается.
 - Эмодзи в шрифте нет — иконки рисуются элементами UI (см. монетку `.coin`).
+- Standalone использует уровень качества Mobile: у PC-рендерера из шаблона SSAO падает в сборке и даёт чёрный экран.
 
 ## Соглашения
 

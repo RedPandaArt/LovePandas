@@ -1,4 +1,4 @@
-using System;
+
 using System.Collections;
 using LovePandas.UI;
 using UnityEngine;
@@ -15,11 +15,11 @@ namespace LovePandas.App
 
         public static void TryStart(AppUI ui)
         {
-            var dir = Arg("-lpShot");
+            var dir = Args.Get("-lpShot");
             if (dir == null) return;
             var s = new GameObject("AutoShot").AddComponent<AutoShot>();
             s.dir = dir;
-            s.screens = (Arg("-lpScreens") ?? "home").Split(',');
+            s.screens = (Args.Get("-lpScreens") ?? "home").Split(',');
             s.ui = ui;
             s.StartCoroutine(s.Run());
         }
@@ -37,14 +37,6 @@ namespace LovePandas.App
             }
             yield return new WaitForSeconds(0.5f);
             Application.Quit();
-        }
-
-        static string Arg(string name)
-        {
-            var args = Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length - 1; i++)
-                if (args[i] == name) return args[i + 1];
-            return null;
         }
     }
 }
