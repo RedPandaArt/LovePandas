@@ -19,5 +19,16 @@ namespace LovePandas.View
             cache[color] = m;
             return m;
         }
+
+        static Material desaturated;
+
+        /// Для некупленных вещей на доске инвентаря: тот же тушевой шейдер, но серый.
+        public static Material Desaturated()
+        {
+            if (desaturated != null) return desaturated;
+            desaturated = new Material(Lit(Color.white));
+            desaturated.SetFloat("_Desaturate", 1f);
+            return desaturated;
+        }
     }
 }

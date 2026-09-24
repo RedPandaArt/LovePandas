@@ -9,31 +9,36 @@ using UnityEngine.UIElements;
 
 namespace LovePandas.UI
 {
-    /// Инвентарь-магазин: дощечка слева, вкладки Оружие / Шляпка / Одежка / Ботиночки.
+    /// Инвентарь-магазин поверх 3D-доски (View/BoardView): доска спускается сверху слева, в шапке —
+    /// медальоны категорий Оружие / Шляпка / Одежка / Ботиночки, в гнёздах — модели вещей.
     /// Купленное — цветное (тап надевает/снимает), некупленное — серое с ценником (тап примеряет, «Купить» покупает).
-    /// Примерка живёт только на клиенте (CharacterView.Preview) и снимается при закрытии.
-    /// Справа от дощечки — зона, где панду крутят пальцем. Камера сдвигает панду вправо (CameraRig).
+    /// Примерка — только на клиенте (CharacterView.Preview), снимается при закрытии.
+    /// UI здесь — прозрачный слой касаний, ценники/отметки над гнёздами, крестик и кнопка «Купить».
+    /// Свайп справа от доски крутит панду; камера отодвигает панду вправо (CameraRig).
     public class InventoryPanel
     {
-        const float CharacterViewportX = 0.74f; // панда у правого края, дощечка занимает левые ~55%
-        const float Zoom = 1.25f;               // чуть дальше обычного: панда целиком помещается в правую полосу
+        const float CharacterViewportX = 0.76f;
+        const float Zoom = 1.25f;
+        const float TapSlop = 30f; // px панели: больше — это свайп, а не тап
 
-        static readonly (Category cat, string title)[] Tabs =
-        {
-            (Category.Weapon, "Оружие"), (Category.Hat, "Шляпка"), (Category.Clothes, "Одежка"), (Category.Boots, "Ботиночки"),
-        };
+        static readonly Category[] TabOrder = { Category.Weapon, Category.Hat, Category.Clothes, Category.Boots };
+        static readonly Color EquippedRing = new Color(1f, 0.55f, 0.25f);
+        static readonly Color TryingRing = new Color(0.2f, 0.85f, 0.8f);
 
         readonly GameService game;
         readonly CharacterView character;
+        readonly BoardView board;
         readonly Func<Func<Task<string>>, string, Action, Task> run;
-        readonly Action<string> toast;
-        readonly VisualElement root, panel, rotateArea, tabsRow, buyBar;
-        readonly ScrollView list;
+        readonly VisualElement root, hit, labelsLayer, buyBar;
+        readonly Button close, buyButton;
         readonly Label buyLabel;
-        readonly Button buyButton;
+        readonly VisualElement[] slotLabels = new VisualElement[BoardView.Slots]; // ценник или отметка под гнездом
+        readonly Label[] slotTexts = new Label[BoardView.Slots];
+        readonly List<ItemDef> shown = new List<ItemDef>();
         Category category = Category.Hat;
-        ItemDef trying; // примеряемая некупленная вещь (для кнопки «Купить»)
-        float lastPointerX;
+        ItemDef trying;
+        Vector2 downPos, lastPos;
+        bool dragging;
 
         public bool IsOpen { get; private set; }
         public event Action Closed;
@@ -41,54 +46,51 @@ namespace LovePandas.UI
         public InventoryPanel(VisualElement root, GameService game, CharacterView character,
                               Func<Func<Task<string>>, string, Action, Task> run, Action<string> toast)
         {
+            this.root = root;
             this.game = game;
             this.character = character;
             this.run = run;
-            this.toast = toast;
-            this.root = root;
+            board = BoardView.Create(Camera.main);
 
-            // Зона вращения панды — всё справа от дощечки
-            rotateArea = new VisualElement();
-            rotateArea.AddToClassList("inv-rotate");
-            rotateArea.AddToClassList("hidden");
-            rotateArea.RegisterCallback<PointerDownEvent>(e => { lastPointerX = e.position.x; rotateArea.CapturePointer(e.pointerId); });
-            rotateArea.RegisterCallback<PointerMoveEvent>(e =>
+            // слой касаний на весь экран: тап по доске — выбор, свайп — вращение панды
+            hit = new VisualElement();
+            hit.AddToClassList("inv-hit");
+            hit.AddToClassList("hidden");
+            hit.RegisterCallback<PointerDownEvent>(e => { downPos = lastPos = e.position; dragging = false; hit.CapturePointer(e.pointerId); });
+            hit.RegisterCallback<PointerMoveEvent>(e =>
             {
-                if (!rotateArea.HasPointerCapture(e.pointerId)) return;
-                character.UserYaw -= (e.position.x - lastPointerX) * 0.6f;
-                lastPointerX = e.position.x;
+                if (!hit.HasPointerCapture(e.pointerId)) return;
+                if (((Vector2)e.position - downPos).magnitude > TapSlop) dragging = true;
+                if (dragging) character.UserYaw -= (e.position.x - lastPos.x) * 0.6f;
+                lastPos = e.position;
             });
-            rotateArea.RegisterCallback<PointerUpEvent>(e => rotateArea.ReleasePointer(e.pointerId));
-            root.Add(rotateArea);
-
-            panel = new VisualElement();
-            panel.AddToClassList("inv-panel");
-            panel.AddToClassList("hidden");
-            panel.style.backgroundImage = Resources.Load<Texture2D>("UI/plank");
-            root.Add(panel);
-
-            var header = new VisualElement();
-            header.AddToClassList("inv-header");
-            var title = new Label("Инвентарь");
-            title.AddToClassList("inv-title");
-            header.Add(title);
-            header.Add(AppUI.CloseButton(Close));
-            panel.Add(header);
-
-            tabsRow = new VisualElement();
-            tabsRow.AddToClassList("inv-tabs");
-            foreach (var (cat, name) in Tabs)
+            hit.RegisterCallback<PointerUpEvent>(e =>
             {
-                var tab = new Button(() => { category = cat; Render(); }) { text = name };
-                tab.AddToClassList("inv-tab");
-                tab.userData = cat;
-                tabsRow.Add(tab);
-            }
-            panel.Add(tabsRow);
+                hit.ReleasePointer(e.pointerId);
+                if (!dragging) Tap(e.position);
+            });
+            root.Add(hit);
 
-            list = new ScrollView(ScrollViewMode.Vertical);
-            list.AddToClassList("inv-list");
-            panel.Add(list);
+            labelsLayer = new VisualElement { pickingMode = PickingMode.Ignore };
+            labelsLayer.AddToClassList("inv-labels");
+            labelsLayer.AddToClassList("hidden");
+            for (int i = 0; i < BoardView.Slots; i++)
+            {
+                slotLabels[i] = new VisualElement { pickingMode = PickingMode.Ignore };
+                slotLabels[i].AddToClassList("inv-slot-label");
+                var coin = new VisualElement { pickingMode = PickingMode.Ignore };
+                coin.AddToClassList("coin");
+                slotLabels[i].Add(coin);
+                slotTexts[i] = new Label { pickingMode = PickingMode.Ignore };
+                slotLabels[i].Add(slotTexts[i]);
+                labelsLayer.Add(slotLabels[i]);
+            }
+            root.Add(labelsLayer);
+
+            close = AppUI.CloseButton(Close);
+            close.AddToClassList("inv-close");
+            close.AddToClassList("hidden");
+            root.Add(close);
 
             buyBar = new VisualElement();
             buyBar.AddToClassList("inv-buy");
@@ -100,17 +102,17 @@ namespace LovePandas.UI
             buyButton.AddToClassList("action-btn");
             buyButton.AddToClassList("inv-buy-btn");
             buyBar.Add(buyButton);
-            panel.Add(buyBar);
+            root.Add(buyBar);
         }
 
         public void Open()
         {
             IsOpen = true;
-            root.AddToClassList("inv-open"); // всплывашки уезжают вправо, чтобы не закрывать дощечку
-            panel.RemoveFromClassList("hidden");
-            rotateArea.RemoveFromClassList("hidden");
+            root.AddToClassList("inv-open");
+            foreach (var e in new[] { hit, labelsLayer, close }) e.RemoveFromClassList("hidden");
             character.UserYaw = 0;
             Rig()?.Focus(CharacterViewportX, Zoom);
+            board.Show();
             Render();
         }
 
@@ -119,17 +121,16 @@ namespace LovePandas.UI
             if (!IsOpen) return;
             IsOpen = false;
             root.RemoveFromClassList("inv-open");
-            panel.AddToClassList("hidden");
-            rotateArea.AddToClassList("hidden");
+            foreach (var e in new[] { hit, labelsLayer, close, buyBar }) e.AddToClassList("hidden");
             trying = null;
             character.Preview.Clear();
             character.UserYaw = 0;
             character.Reapply();
             Rig()?.Reset();
+            board.Hide();
             Closed?.Invoke();
         }
 
-        /// Состояние с сервера поменялось (покупка, надевание, опрос).
         public void Refresh()
         {
             if (IsOpen) Render();
@@ -137,20 +138,41 @@ namespace LovePandas.UI
 
         static CameraRig Rig() => Camera.main != null ? Camera.main.GetComponent<CameraRig>() : null;
 
+        // ---------- Содержимое доски ----------
+
         void Render()
         {
-            foreach (var tab in tabsRow.Children())
-                tab.EnableInClassList("selected", (Category)tab.userData == category);
+            board.SetTab(Array.IndexOf(TabOrder, category));
+            shown.Clear();
+            shown.AddRange(game.Catalog.Where(i => i.Category == category)
+                .OrderByDescending(i => game.Owns(i.id)).ThenBy(i => i.price).Take(BoardView.Slots));
 
-            var offset = list.scrollOffset;
-            list.Clear();
-            var grid = new VisualElement();
-            grid.AddToClassList("inv-grid");
-            var items = game.Catalog.Where(i => i.Category == category)
-                .OrderByDescending(i => game.Owns(i.id)).ThenBy(i => i.price).ToList();
-            foreach (var item in items) grid.Add(Card(item));
-            list.Add(grid);
-            list.schedule.Execute(() => list.scrollOffset = offset);
+            for (int i = 0; i < BoardView.Slots; i++)
+            {
+                var item = i < shown.Count ? shown[i] : null;
+                var label = slotLabels[i];
+                label.RemoveFromClassList("price");
+                label.RemoveFromClassList("equipped");
+                label.RemoveFromClassList("trying");
+                if (item == null)
+                {
+                    board.SetSlot(i, null, BoardView.SlotState.Owned, null);
+                    label.AddToClassList("hidden");
+                    continue;
+                }
+                bool owned = game.Owns(item.id);
+                bool previewing = character.Preview.TryGetValue(item.Slot, out var p) && p == item.id;
+                bool equipped = !character.Preview.ContainsKey(item.Slot) && game.Me.GetEquipped(item.Slot) == item.id;
+                board.SetSlot(i, item, owned ? BoardView.SlotState.Owned : BoardView.SlotState.Locked,
+                              previewing ? TryingRing : equipped ? EquippedRing : (Color?)null);
+
+                label.RemoveFromClassList("hidden");
+                var text = slotTexts[i];
+                if (!owned) { text.text = item.price.ToString(); label.AddToClassList("price"); }
+                else if (equipped) { text.text = "надето"; label.AddToClassList("equipped"); }
+                else if (previewing) { text.text = "примерка"; label.AddToClassList("trying"); }
+                else label.AddToClassList("hidden");
+            }
 
             bool showBuy = trying != null && !game.Owns(trying.id);
             buyBar.EnableInClassList("hidden", !showBuy);
@@ -162,49 +184,54 @@ namespace LovePandas.UI
             }
         }
 
-        VisualElement Card(ItemDef item)
+        /// Каждый кадр (из AppUI.Update): надписи и крестик едут за доской, пока она спускается и качается.
+        public void Tick()
         {
-            bool owned = game.Owns(item.id);
-            bool equipped = !character.Preview.ContainsKey(item.Slot) && game.Me.GetEquipped(item.Slot) == item.id;
-            bool previewing = character.Preview.TryGetValue(item.Slot, out var p) && p == item.id;
-
-            var card = new Button(() => Tap(item));
-            card.AddToClassList("inv-card");
-            if (!owned) card.AddToClassList("locked");
-            if (equipped) card.AddToClassList("equipped");
-            if (previewing) card.AddToClassList("trying");
-
-            var (color, gray) = IconRenderer.Get(item);
-            var icon = new VisualElement();
-            icon.AddToClassList("inv-icon");
-            if (color != null) icon.style.backgroundImage = owned ? color : gray;
-            else icon.style.backgroundColor = CharacterView.RarityColor(item.Rarity);
-            card.Add(icon);
-
-            var name = new Label(item.name);
-            name.AddToClassList("inv-name");
-            card.Add(name);
-
-            if (!owned)
+            if (!board.Visible || root.panel == null) return;
+            var panel = root.panel;
+            var cam = board.Camera;
+            for (int i = 0; i < BoardView.Slots; i++)
             {
-                var tag = new VisualElement();
-                tag.AddToClassList("inv-price");
-                var coin = new VisualElement();
-                coin.AddToClassList("coin");
-                tag.Add(coin);
-                tag.Add(new Label(item.price.ToString()));
-                card.Add(tag);
+                var p = RuntimePanelUtils.CameraTransformWorldToPanel(panel, board.SlotLabelWorld(i), cam);
+                slotLabels[i].style.left = p.x;
+                slotLabels[i].style.top = p.y;
             }
-            else if (equipped || previewing)
-            {
-                var badge = new Label(equipped ? "надето" : "примерка");
-                badge.AddToClassList("inv-badge");
-                card.Add(badge);
-            }
-            return card;
+            var c = RuntimePanelUtils.CameraTransformWorldToPanel(panel, board.CloseWorld, cam);
+            close.style.left = c.x;
+            close.style.top = c.y;
         }
 
-        void Tap(ItemDef item)
+        // ---------- Касания ----------
+
+        void Tap(Vector2 pos)
+        {
+            var panel = root.panel;
+            var cam = board.Camera;
+            float Radius(Vector3 center, float r)
+            {
+                var a = RuntimePanelUtils.CameraTransformWorldToPanel(panel, center, cam);
+                var b = RuntimePanelUtils.CameraTransformWorldToPanel(panel, center + board.CameraRight * r, cam);
+                return (b - a).magnitude;
+            }
+            bool Near(Vector3 world, float r) =>
+                (RuntimePanelUtils.CameraTransformWorldToPanel(panel, world, cam) - pos).magnitude <= Radius(world, r);
+
+            for (int i = 0; i < TabOrder.Length; i++)
+                if (Near(board.TabWorld(i), board.TabRadiusWorld * 1.3f))
+                {
+                    category = TabOrder[i];
+                    Render();
+                    return;
+                }
+            for (int i = 0; i < shown.Count; i++)
+                if (Near(board.SlotWorld(i), board.SlotRadiusWorld * 1.15f))
+                {
+                    TapItem(shown[i]);
+                    return;
+                }
+        }
+
+        void TapItem(ItemDef item)
         {
             var slot = item.Slot;
             if (game.Owns(item.id))

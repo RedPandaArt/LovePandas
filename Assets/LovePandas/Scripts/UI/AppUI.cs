@@ -73,6 +73,7 @@ namespace LovePandas.UI
             // Опрос нужен, чтобы увидеть действия партнёра. Push-уведомления придут позже.
             if (Time.time >= nextPoll && !polling && !busy && (stage == Stage.Home || stage == Stage.Pair))
                 Poll();
+            inventory?.Tick();
         }
 
         async void Poll()

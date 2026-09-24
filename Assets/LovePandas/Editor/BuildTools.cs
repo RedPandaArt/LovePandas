@@ -48,7 +48,8 @@ namespace LovePandas.Editor
             EnsureMaterial("Assets/LovePandas/Resources/Materials/FX.mat", "LovePandas/FX");
 
             // Фоны и UI-текстуры: полное качество, без сжатия в кашу на телефоне.
-            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/LovePandas/Resources/Backgrounds", "Assets/LovePandas/Resources/UI" }))
+            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/LovePandas/Resources/Backgrounds", "Assets/LovePandas/Resources/UI",
+                                                                               "Assets/LovePandas/Resources/Textures", "Assets/LovePandas/Resources/Foliage" }))
             {
                 if (!(AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid)) is TextureImporter ti)) continue;
                 if (ti.maxTextureSize == 2048 && ti.mipmapEnabled == false) continue;

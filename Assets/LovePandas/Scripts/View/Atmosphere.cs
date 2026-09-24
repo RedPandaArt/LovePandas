@@ -29,6 +29,8 @@ namespace LovePandas.View
             backdropAspect = (float)tex.width / tex.height;
             var bgMat = FX(tex, Color.white, additive: false);
             bgMat.renderQueue = 1000; // рисуется первым, персонаж поверх
+            bgMat.SetFloat("_Wind", 0.0035f);   // листва на фоне чуть колышется
+            bgMat.SetFloat("_GroundLine", 0.36f); // площадка внизу картинки неподвижна
             backdrop = Quad("Backdrop", cam.transform, bgMat).transform;
             backdrop.localPosition = new Vector3(0, 0, 40);
 
@@ -40,11 +42,15 @@ namespace LovePandas.View
             shaft.localRotation = Quaternion.Euler(0, 0, -18);
             shaft.localScale = new Vector3(2.6f, 8f, 1);
 
-            // Мягкая тень под лапами — персонаж «стоит» на нарисованной площадке
-            var blob = Quad("BlobShadow", world, FX(RadialTexture(), new Color(0.05f, 0.08f, 0.06f, 0.55f), additive: false)).transform;
-            blob.localPosition = new Vector3(0, 0.01f, 0);
+            Platform(world);
+
+            // Тень под лапами на платформе
+            var blob = Quad("BlobShadow", world, FX(RadialTexture(), new Color(0.04f, 0.05f, 0.04f, 0.75f), additive: false)).transform;
+            blob.localPosition = new Vector3(0, 0.012f, 0);
             blob.localRotation = Quaternion.Euler(90, 0, 0);
-            blob.localScale = new Vector3(1.9f, 1.2f, 1);
+            blob.localScale = new Vector3(1.6f, 1.1f, 1);
+
+            Foliage.Create(world);
 
             Dust(world);
             PostFX();
@@ -63,6 +69,23 @@ namespace LovePandas.View
             var c = shaftColor;
             c.a *= 0.85f + 0.15f * Mathf.Sin(Time.time * 0.7f);
             shaftMat.SetColor("_BaseColor", c);
+        }
+
+        /// Каменный диск под пандой (Art/build_ui.py → Models/Env/platform): верх — текстура плит, мох и камешки — простой материал.
+        static void Platform(Transform world)
+        {
+            var prefab = Resources.Load<GameObject>("Models/Env/platform");
+            if (prefab == null) return;
+            var p = Instantiate(prefab, world, false);
+            p.name = "Platform";
+            var stone = new Material(Resources.Load<Material>("Materials/Base"));
+            stone.SetTexture("_BaseMap", Resources.Load<Texture2D>("Textures/stone"));
+            stone.SetFloat("_OutlineWidth", 0.006f);
+            foreach (var r in p.GetComponentsInChildren<Renderer>())
+            {
+                r.sharedMaterial = r.name.Contains("Decor") ? Materials.Lit(Color.white) : stone;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+            }
         }
 
         void Dust(Transform world)
@@ -166,7 +189,7 @@ namespace LovePandas.View
             return shaft;
         }
 
-        static Material FX(Texture tex, Color color, bool additive)
+        public static Material FX(Texture tex, Color color, bool additive)
         {
             var m = new Material(Resources.Load<Material>("Materials/FX"));
             m.SetTexture("_BaseMap", tex);

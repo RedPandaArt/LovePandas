@@ -35,7 +35,10 @@ namespace LovePandas.View
             // камера на линии панды (x = 0): сдвиг камеры влево на (vx − 0.5)·ширину кадра ставит панду в vx
             float dist = -basePos.z * zoom;
             float halfW = dist * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * cam.aspect;
-            transform.localPosition = new Vector3(-(viewportX - 0.5f) * 2f * halfW, basePos.y, -dist);
+            // лёгкий «дыхательный» дрейф — слои листвы и фона всё время чуть смещаются друг относительно друга
+            float t = Time.time;
+            var drift = new Vector3(Mathf.Sin(t * 0.23f) * 0.06f, Mathf.Sin(t * 0.31f + 1f) * 0.035f, 0);
+            transform.localPosition = new Vector3(-(viewportX - 0.5f) * 2f * halfW, basePos.y, -dist) + drift;
         }
     }
 }

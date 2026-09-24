@@ -14,6 +14,7 @@ Shader "LovePandas/Toon"
         _RimStrength ("Rim Strength", Range(0,2)) = 0.55
         _OutlineColor ("Outline Color", Color) = (0.18, 0.1, 0.08, 1)
         _OutlineWidth ("Outline Width", Range(0,0.05)) = 0.012
+        _Desaturate ("Desaturate", Range(0,1)) = 0
     }
 
     SubShader
@@ -27,7 +28,7 @@ Shader "LovePandas/Toon"
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor, _ShadeColor, _RimColor, _OutlineColor;
-            half _ShadeStep, _ShadeSoftness, _RimPower, _RimStrength, _OutlineWidth;
+            half _ShadeStep, _ShadeSoftness, _RimPower, _RimStrength, _OutlineWidth, _Desaturate;
         CBUFFER_END
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         ENDHLSL
@@ -74,6 +75,9 @@ Shader "LovePandas/Toon"
                 half rim = pow(saturate(1 - dot(n, v)), _RimPower) * _RimStrength;
                 col += _RimColor.rgb * rim * (0.35 + 0.65 * lit);
                 col = lerp(col, albedo.rgb * 2.2, glow); // светящиеся части ярче порога bloom
+                // некупленная вещь на доске инвентаря: серая и чуть светлее
+                half grey = dot(col, half3(0.3, 0.59, 0.11)) * 0.75 + 0.12;
+                col = lerp(col, grey.xxx, _Desaturate);
                 return half4(col, 1);
             }
             ENDHLSL

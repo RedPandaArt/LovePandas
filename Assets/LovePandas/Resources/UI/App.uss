@@ -179,72 +179,43 @@
 .x-bar-a { rotate: 45deg; }
 .x-bar-b { rotate: -45deg; }
 
-/* ---------- Инвентарь: дощечка слева ---------- */
-.inv-panel {
+/* ---------- Инвентарь поверх 3D-доски (BoardView) ---------- */
+.inv-hit { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.inv-labels { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+/* ценник/отметка под гнездом: позицию задаёт код (центр по x — translate) */
+.inv-slot-label {
     position: absolute;
-    left: 0; top: 140px; bottom: 20px;
-    width: 56%;
-    -unity-background-scale-mode: stretch-to-fill;
-    padding: 70px 44px 70px 40px;
-}
-.inv-header { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.inv-title {
-    font-size: 46px;
-    -unity-font-style: bold;
-    color: rgb(255, 246, 228);
-    text-shadow: 0 3px 4px rgba(60, 30, 10, 0.8);
-}
-.inv-panel .close-btn { width: 80px; height: 80px; border-radius: 40px; background-color: rgba(255, 240, 220, 0.9); }
-.inv-tabs { flex-direction: row; flex-wrap: wrap; margin-bottom: 14px; }
-.inv-tab {
-    width: 48%;
-    height: 72px;
-    margin: 0 1% 10px 1%;
-    border-radius: 24px;
-    border-width: 0;
-    background-color: rgba(70, 40, 20, 0.55);
-    color: rgb(255, 240, 220);
-    font-size: 28px;
-    -unity-font-style: bold;
-}
-.inv-tab.selected { background-color: rgb(232, 110, 72); color: rgb(255, 255, 255); }
-.inv-list { flex-grow: 1; }
-.inv-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
-.inv-card {
-    width: 48%;
-    height: 250px;
-    margin: 0 0 14px 0;
-    padding: 10px;
-    border-radius: 26px;
-    border-width: 5px;
-    border-color: rgba(0, 0, 0, 0);
-    background-color: rgba(255, 248, 236, 0.9);
+    translate: -50% -50%;
+    flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-}
-.inv-card.locked { background-color: rgba(225, 215, 200, 0.82); }
-.inv-card.equipped { border-color: rgb(232, 110, 72); }
-.inv-card.trying { border-color: rgb(40, 170, 160); }
-.inv-icon { width: 170px; height: 160px; -unity-background-scale-mode: scale-to-fit; border-radius: 75px; }
-.inv-name { font-size: 24px; -unity-text-align: middle-center; white-space: normal; color: rgb(74, 46, 36); }
-.inv-card.locked .inv-name { color: rgb(120, 105, 95); }
-.inv-price {
-    flex-direction: row; align-items: center;
-    padding: 2px 14px;
-    border-radius: 16px;
+    padding: 4px 16px;
+    border-radius: 18px;
     background-color: rgb(74, 46, 36);
-    font-size: 24px;
+    font-size: 26px;
     -unity-font-style: bold;
     color: rgb(255, 214, 120);
 }
-.inv-price .coin { width: 24px; height: 24px; margin-right: 6px; border-width: 3px; }
-.inv-badge { font-size: 22px; -unity-font-style: bold; color: rgb(232, 110, 72); }
-.inv-card.trying .inv-badge { color: rgb(40, 150, 140); }
-.inv-buy { padding-top: 12px; align-items: stretch; }
-.inv-buy-label { font-size: 26px; color: rgb(255, 246, 228); -unity-text-align: middle-center; margin-bottom: 8px; text-shadow: 0 2px 3px rgba(60, 30, 10, 0.8); }
-.inv-buy-btn { height: 96px; margin: 0; font-size: 34px; border-radius: 32px; }
-.inv-buy-btn:disabled { background-color: rgb(150, 130, 120); }
-.inv-rotate { position: absolute; left: 56%; right: 0; top: 140px; bottom: 0; }
+.inv-slot-label .coin { width: 26px; height: 26px; margin-right: 8px; border-width: 3px; }
+.inv-slot-label.equipped { background-color: rgb(232, 110, 72); color: rgb(255, 255, 255); }
+.inv-slot-label.trying { background-color: rgb(40, 150, 140); color: rgb(255, 255, 255); }
+.inv-slot-label.equipped .coin, .inv-slot-label.trying .coin { display: none; }
+.inv-close {
+    position: absolute;
+    translate: -50% -50%;
+    width: 84px; height: 84px;
+    border-radius: 42px;
+    background-color: rgb(255, 240, 220);
+    border-width: 4px;
+    border-color: rgb(120, 78, 45);
+}
+.inv-buy {
+    position: absolute;
+    left: 3%; width: 52%; bottom: 28px;
+    align-items: stretch;
+}
+.inv-buy-label { font-size: 28px; color: rgb(255, 246, 228); -unity-text-align: middle-center; margin-bottom: 8px; text-shadow: 0 2px 3px rgba(40, 20, 10, 0.9); }
+.inv-buy-btn { height: 100px; margin: 0; font-size: 34px; border-radius: 34px; border-width: 4px; border-color: rgb(150, 70, 40); }
+.inv-buy-btn:disabled { background-color: rgb(150, 130, 120); border-color: rgb(110, 95, 85); }
 .inv-open .toast { left: 58%; right: 16px; top: 150px; font-size: 28px; }
 
 /* Метка dev-сборки (LP_DEV) */
