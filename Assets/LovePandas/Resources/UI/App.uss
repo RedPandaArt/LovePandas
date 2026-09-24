@@ -1,0 +1,180 @@
+/* Тёплая уютная палитра. Размеры в px при референсе 1080×1920 (см. Bootstrap, PanelSettings). */
+
+.root {
+    flex-grow: 1;
+    justify-content: space-between;
+    padding: 48px 32px 56px 32px;
+    -unity-font-style: normal;
+    color: rgb(74, 46, 36);
+}
+
+/* ---------- Верхняя панель ---------- */
+.top-bar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.chip {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(255, 250, 242, 0.92);
+    border-radius: 40px;
+    padding: 14px 28px;
+    font-size: 40px;
+    -unity-font-style: bold;
+}
+.player-name { font-size: 36px; }
+.switch-btn {
+    font-size: 30px;
+    margin-left: 16px;
+    padding: 10px 22px;
+    border-radius: 30px;
+    background-color: rgb(245, 214, 196);
+    border-width: 0;
+    color: rgb(74, 46, 36);
+}
+
+/* ---------- Нижние кнопки ---------- */
+.nav {
+    flex-direction: row;
+    justify-content: space-between;
+}
+.nav-btn {
+    flex-grow: 1;
+    height: 150px;
+    margin: 0 10px;
+    border-radius: 40px;
+    border-width: 0;
+    background-color: rgb(232, 110, 72);
+    color: rgb(255, 255, 255);
+    font-size: 40px;
+    -unity-font-style: bold;
+}
+
+/* ---------- Шторка экрана ---------- */
+.sheet-backdrop {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    justify-content: flex-end;
+}
+.sheet {
+    height: 62%;
+    background-color: rgb(255, 248, 238);
+    border-top-left-radius: 56px;
+    border-top-right-radius: 56px;
+    padding: 36px 32px 40px 32px;
+}
+.sheet-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.sheet-title { font-size: 52px; -unity-font-style: bold; }
+.close-btn {
+    width: 96px; height: 96px;
+    border-radius: 48px;
+    border-width: 0;
+    font-size: 44px;
+    background-color: rgb(245, 214, 196);
+    color: rgb(74, 46, 36);
+}
+.section-title {
+    font-size: 34px;
+    -unity-font-style: bold;
+    margin: 18px 0 10px 0;
+    color: rgb(150, 100, 80);
+}
+.empty { font-size: 32px; color: rgb(170, 130, 110); margin: 8px 0 16px 0; }
+
+/* ---------- Карточка задания ---------- */
+.quest {
+    background-color: rgb(255, 255, 255);
+    border-radius: 32px;
+    padding: 22px 26px;
+    margin-bottom: 14px;
+}
+.quest-text { font-size: 36px; white-space: normal; }
+.quest-meta {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+}
+.quest-reward { font-size: 34px; -unity-font-style: bold; color: rgb(214, 140, 20); }
+.quest-status { font-size: 28px; color: rgb(150, 110, 90); }
+.quest-actions { flex-direction: row; }
+
+.action-btn {
+    font-size: 30px;
+    padding: 12px 24px;
+    margin-left: 12px;
+    border-radius: 28px;
+    border-width: 0;
+    background-color: rgb(232, 110, 72);
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+.action-btn.secondary {
+    background-color: rgb(245, 214, 196);
+    color: rgb(74, 46, 36);
+}
+
+/* ---------- Форма нового задания ---------- */
+.form { background-color: rgb(255, 255, 255); border-radius: 32px; padding: 20px; margin-bottom: 16px; }
+.form-row { flex-direction: row; align-items: center; margin-top: 12px; }
+.input { font-size: 34px; }
+.input > .unity-base-text-field__input {
+    border-radius: 20px;
+    padding: 14px 18px;
+    background-color: rgb(250, 240, 230);
+    border-width: 0;
+    color: rgb(74, 46, 36);
+}
+.input-text { flex-grow: 1; }
+.input-price { width: 220px; }
+
+/* ---------- Сетка магазина и гардероба ---------- */
+.grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.item {
+    width: 48%;
+    height: 250px;
+    margin-bottom: 18px;
+    border-radius: 32px;
+    border-width: 0;
+    background-color: rgb(255, 255, 255);
+    padding: 18px;
+    align-items: center;
+    justify-content: space-between;
+}
+.item.equipped { border-width: 6px; border-color: rgb(232, 110, 72); }
+.item.owned .item-price { color: rgb(90, 160, 100); }
+.item-swatch { width: 90px; height: 90px; border-radius: 45px; }
+.item-name { font-size: 32px; -unity-text-align: middle-center; white-space: normal; }
+.item-price { font-size: 30px; -unity-font-style: bold; color: rgb(214, 140, 20); }
+
+/* ---------- Всплывашка ---------- */
+.toast {
+    position: absolute;
+    left: 60px; right: 60px; top: 190px;
+    padding: 22px 30px;
+    border-radius: 36px;
+    background-color: rgba(74, 46, 36, 0.92);
+    color: rgb(255, 255, 255);
+    font-size: 34px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+.hidden { display: none; }
+
+/* ---------- Монетка ---------- */
+.price { flex-direction: row; align-items: center; }
+.coin {
+    width: 34px; height: 34px;
+    margin-right: 10px;
+    border-radius: 17px;
+    background-color: rgb(255, 200, 60);
+    border-width: 4px;
+    border-color: rgb(214, 140, 20);
+}

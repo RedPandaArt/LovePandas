@@ -1,0 +1,46 @@
+# Unity — генерируемое редактором
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/.utmp/
+
+# Сборки Android
+*.apk
+*.aab
+*.keystore
+*.jks
+/Assets/Plugins/Android/*.gradle.bak
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Прочее
+crashlytics-buildid.txt
+sysinfo.txt
+/Assets/StreamingAssets/aa.meta
+/Assets/StreamingAssets/aa/*
+.DS_Store
+Thumbs.db
+
+# Firebase — ключи не коммитим
+google-services.json
+GoogleService-Info.plist
