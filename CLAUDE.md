@@ -24,7 +24,10 @@ cd server && npm start         # :8787, база data/lovepandas.db (DB_PATH, PO
 - `src/game.ts` — вся логика: регистрация, пара по коду, эскроу заданий, магазин, бонус, `state()`.
 - `src/index.ts` — HTTP-маршруты. Ответ на любое действие — `{ state }` или `{ error }`.
 - `GET /state?since=<version>` отдаёт 304, если у пары ничего не менялось — клиент опрашивает раз в 4 с.
-- Деплой на Railway — только по команде пользователя (сервис ещё не создан).
+- Прод: Railway, проект `lovepandas`, сервис `server`, https://server-production-1b47.up.railway.app.
+  Собирается из GitHub (ветка `claude/unity-game-idea-6xp658`, root `/server`), пересборка только на изменения в `server/**`.
+  База — volume `/data` (`DB_PATH=/data/lovepandas.db`), `PORT=8787`, память Node ограничена 128 МБ.
+- **Пуш с изменениями в `server/` = деплой.** Выкатывать только по команде пользователя.
 
 ## Устройство кода
 
@@ -39,8 +42,8 @@ Assets/LovePandas/
 
 - Сцена собирается в `Bootstrap` через `RuntimeInitializeOnLoadMethod` — сцена в редакторе пустая, в git не конфликтует.
 - `Core/ApiClient` — HTTP к серверу, анонимный токен в PlayerPrefs. `Core/GameService` — состояние с сервера и вызовы действий.
-- Адрес сервера — `Resources/server_url.txt` (сейчас IP ПК в локальной сети). Android пускает http, пока
-  в `BuildTools.Setup` стоит `InsecureHttpOption.AlwaysAllowed` — убрать, когда сервер переедет на https.
+- Адрес сервера — `Resources/server_url.txt` (прод на Railway). Для теста телефона с сервером на ПК: там IP ПК
+  (`http://192.168.0.20:8787`) и `InsecureHttpOption.AlwaysAllowed` в `BuildTools.Setup` — обратно не коммитить.
 - Тестовые ключи ПК-сборки: `-lpServer http://127.0.0.1:8787`, `-lpProfile <имя>` (второй игрок), `-lpToken <токен>`.
 
 ## Сборка
