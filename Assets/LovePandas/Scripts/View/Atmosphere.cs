@@ -176,17 +176,6 @@ namespace LovePandas.View
             return m;
         }
 
-        static GameObject Quad(string name, Transform parent, Material mat)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            go.name = name;
-            Destroy(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            var r = go.GetComponent<Renderer>();
-            r.sharedMaterial = mat;
-            r.shadowCastingMode = ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            return go;
-        }
+        static GameObject Quad(string name, Transform parent, Material mat) => Shapes.Quad(name, parent, mat);
     }
 }

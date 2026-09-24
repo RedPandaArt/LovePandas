@@ -114,9 +114,10 @@ namespace LovePandas.Editor
             var path = dev ? "Builds/LovePandas-dev.apk" : ApkPath;
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             EditorUserBuildSettings.buildAppBundle = false;
+            UnityEditor.Build.Reporting.BuildReport report;
             try
             {
-                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {
                     scenes = new[] { ScenePath },
                     locationPathName = path,
@@ -124,14 +125,14 @@ namespace LovePandas.Editor
                     options = dev ? BuildOptions.Development : BuildOptions.None,
                     extraScriptingDefines = dev ? new[] { "LP_DEV" } : null,
                 });
-                Debug.Log($"[LovePandas] Build {(dev ? "DEV " : "")}{report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB");
-                if (Application.isBatchMode)
-                    EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
             }
             finally
             {
-                if (dev) Setup(); // вернуть боевые настройки, чтобы они не попали в git
+                if (dev) { Setup(); AssetDatabase.SaveAssets(); } // вернуть боевые настройки, чтобы они не попали в git
             }
+            Debug.Log($"[LovePandas] Build {(dev ? "DEV " : "")}{report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB");
+            if (Application.isBatchMode)
+                EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
         }
     }
 }

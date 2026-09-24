@@ -153,9 +153,7 @@ namespace LovePandas.View
         /// Предмет, у которого ещё нет модели: цветной кружок нужной редкости.
         static GameObject Placeholder(ItemDef item)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(go.GetComponent<Collider>());
-            go.GetComponent<Renderer>().sharedMaterial = Materials.Lit(RarityColor(item.Rarity));
+            var go = Shapes.Sphere("Placeholder", null, Materials.Lit(RarityColor(item.Rarity)));
             go.transform.localScale = Vector3.one * 0.08f;
             return go;
         }

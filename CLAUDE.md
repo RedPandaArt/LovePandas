@@ -40,7 +40,18 @@ cd server && npm start         # :8787, база data/lovepandas.db (DB_PATH, PO
 - Прод: Railway, проект `lovepandas`, сервис `server`, https://server-production-1b47.up.railway.app.
   Собирается из GitHub (ветка `claude/unity-game-idea-6xp658`, root `/server`), пересборка только на изменения в `server/**`.
   База — volume `/data` (`DB_PATH=/data/lovepandas.db`), `PORT=8787`, память Node ограничена 128 МБ.
-- **Пуш с изменениями в `server/` = деплой.** Выкатывать только по команде пользователя.
+- **Ветки:** `dev` — работа, пушить можно всегда; `main` — прод, Railway собирает сервер только из неё.
+  **Мерж `dev` → `main` = выкат**, только по команде пользователя.
+
+## Dev-цикл (проверка на телефонах без выката)
+
+1. Сервер на ПК: `cd server && npm start` (база `server/data/`, в git не попадает).
+2. `sh tools/dev-phones.sh` — собирает «LovePandas Dev» (`com.redpandaart.lovepandas.dev`, метка DEV,
+   сервер из `Resources/server_url_dev.txt` = IP ПК) и ставит на все телефоны по adb. Боевое приложение не трогается.
+3. Правка сервера → перезапустить `npm start`; правка клиента → снова `tools/dev-phones.sh`.
+4. Всё хорошо → мерж `dev` в `main` по команде пользователя, затем боевой APK (`BuildAndroid`).
+
+Если IP ПК сменился — поправить `server_url_dev.txt`. Dev-сборка меняет PlayerSettings только на время билда.
 
 ## Устройство кода
 
@@ -55,8 +66,8 @@ Assets/LovePandas/
 
 - Сцена собирается в `Bootstrap` через `RuntimeInitializeOnLoadMethod` — сцена в редакторе пустая, в git не конфликтует.
 - `Core/ApiClient` — HTTP к серверу, анонимный токен в PlayerPrefs. `Core/GameService` — состояние с сервера и вызовы действий.
-- Адрес сервера — `Resources/server_url.txt` (прод на Railway). Для теста телефона с сервером на ПК: там IP ПК
-  (`http://192.168.0.20:8787`) и `InsecureHttpOption.AlwaysAllowed` в `BuildTools.Setup` — обратно не коммитить.
+- Адрес сервера — `Resources/server_url.txt` (прод на Railway); в dev-сборке (`LP_DEV`) — `server_url_dev.txt`.
+- Не использовать `GameObject.CreatePrimitive`: физика вырезана из сборки, коллайдер не создаётся. Есть `View/Shapes`.
 - Тестовые ключи ПК-сборки: `-lpServer http://127.0.0.1:8787`, `-lpProfile <имя>` (второй игрок), `-lpToken <токен>`.
 
 ## Сборка
