@@ -33,35 +33,30 @@ namespace LovePandas.App
             AutoShot.TryStart(ui);
         }
 
-        /// Временная «диорама»: полянка, небо, мягкий свет. Заменится локацией от художника.
+        /// Локация: камера, свет под нарисованный фон и атмосфера (Atmosphere).
+        /// Камера смотрит горизонтально: лапы персонажа на ~22% высоты экрана, голова на ~62% — он стоит на площадке фона.
         static void BuildLocation(Transform parent)
         {
             var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
             cam.transform.SetParent(parent, false);
-            cam.transform.localPosition = new Vector3(0, 1.6f, -5.2f);
-            cam.transform.localRotation = Quaternion.Euler(8, 0, 0);
+            cam.transform.localPosition = new Vector3(0, 1.6f, -8f);
             cam.fieldOfView = 40;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.99f, 0.86f, 0.74f);
+            cam.backgroundColor = new Color(0.1f, 0.2f, 0.2f);
 
+            // Солнце сверху-слева, как луч на фоне; тёплое. Бирюзовый заполняющий свет — цвет джунглей.
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.transform.SetParent(parent, false);
             sun.type = LightType.Directional;
-            sun.intensity = 1.1f;
-            sun.color = new Color(1f, 0.95f, 0.88f);
-            sun.shadows = LightShadows.Soft;
-            sun.transform.localRotation = Quaternion.Euler(45, -30, 0);
+            sun.intensity = 1.25f;
+            sun.color = new Color(1f, 0.9f, 0.72f);
+            sun.shadows = LightShadows.None;
+            sun.transform.localRotation = Quaternion.Euler(40, 30, 0);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.72f, 0.62f, 0.58f);
+            RenderSettings.ambientLight = new Color(0.42f, 0.62f, 0.6f);
 
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            ground.name = "Ground";
-            Object.Destroy(ground.GetComponent<Collider>());
-            ground.transform.SetParent(parent, false);
-            ground.transform.localPosition = new Vector3(0, -0.05f, 0);
-            ground.transform.localScale = new Vector3(5f, 0.05f, 5f);
-            ground.GetComponent<Renderer>().sharedMaterial = Materials.Lit(new Color(0.62f, 0.78f, 0.45f));
+            Atmosphere.Create(cam, parent, "jungle");
         }
 
         static PanelSettings CreatePanel()

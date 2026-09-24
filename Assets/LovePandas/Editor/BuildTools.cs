@@ -32,14 +32,30 @@ namespace LovePandas.Editor
             }
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            // Базовый материал для View.Materials: через Resources шейдер гарантированно попадает в сборку.
-            const string matPath = "Assets/LovePandas/Resources/Materials/Base.mat";
-            if (!File.Exists(matPath))
+            // Везде мобильный URP. PC-рендерер из шаблона с SSAO в сборке падает и даёт чёрный экран.
+            var mobile = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.RenderPipelineAsset>("Assets/Settings/Mobile_RPAsset.asset");
+            UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = mobile;
+            int current = QualitySettings.GetQualityLevel();
+            for (int i = 0; i < QualitySettings.names.Length; i++)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(matPath));
-                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                mat.SetFloat("_Smoothness", 0.25f);
-                AssetDatabase.CreateAsset(mat, matPath);
+                QualitySettings.SetQualityLevel(i, false);
+                QualitySettings.renderPipeline = mobile;
+            }
+            QualitySettings.SetQualityLevel(current, false);
+
+            // Базовые материалы в Resources: через них шейдеры гарантированно попадают в сборку.
+            EnsureMaterial("Assets/LovePandas/Resources/Materials/Base.mat", "LovePandas/Toon");
+            EnsureMaterial("Assets/LovePandas/Resources/Materials/FX.mat", "LovePandas/FX");
+
+            // Фоны: полное качество, без сжатия в кашу на телефоне.
+            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/LovePandas/Resources/Backgrounds" }))
+            {
+                var ti = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+                if (ti.maxTextureSize == 2048 && ti.mipmapEnabled == false) continue;
+                ti.maxTextureSize = 2048;
+                ti.mipmapEnabled = false;
+                ti.textureCompression = TextureImporterCompression.CompressedHQ;
+                ti.SaveAndReimport();
             }
             AssetDatabase.SaveAssets();
             Debug.Log("[LovePandas] Project setup done");
@@ -60,6 +76,22 @@ namespace LovePandas.Editor
             Debug.Log($"[LovePandas] Win build {report.summary.result}");
             if (Application.isBatchMode)
                 EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+        }
+
+        static void EnsureMaterial(string path, string shaderName)
+        {
+            var shader = Shader.Find(shaderName);
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                AssetDatabase.CreateAsset(new Material(shader), path);
+            }
+            else if (mat.shader != shader)
+            {
+                mat.shader = shader;
+                EditorUtility.SetDirty(mat);
+            }
         }
 
         [MenuItem("LovePandas/Build Android APK")]
