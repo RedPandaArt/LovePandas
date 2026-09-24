@@ -11,6 +11,19 @@
 - Рендер — URP. UI — UI Toolkit, собирается кодом.
 - Blender и ComfyUI есть на машине пользователя — для моделей и концептов.
 
+## Модели (`Art/build_panda.py`)
+
+Панды и предметы одежды строятся скриптом Blender, не руками:
+```
+"C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe" -b --python Art/build_panda.py -- Assets/LovePandas/Resources/Models [папка_превью]
+```
+- `panda_m.fbx`, `panda_f.fbx` — общий скелет (`BONES`): кости тела, хвост из 4 костей, сокеты `Socket_*` под одежду.
+- `Items/<itemId>.fbx` — предмет с origin в точке своего сокета; имя файла = id предмета в каталоге сервера.
+- Окрас — цвета вершин: палитра в sRGB, в атрибут пишется linear (`lin()`); альфа < 1 — свечение.
+- Импорт: `Editor/ModelImport.cs` (запекание осей, без материалов и анимаций). Материал ставит код — `LovePandas/Toon`.
+- В Unity предмет вешается через контейнер (`CharacterView.MakeItem`): внутренний поворот FBX не трогать.
+- Новый предмет с моделью: функция `item_*` в скрипте + запись в `server/src/catalog.ts`.
+
 ## Сервер (`server/`)
 
 Node 24 + TypeScript (запускается напрямую, без сборки) + встроенный `node:sqlite`. Зависимостей нет.
