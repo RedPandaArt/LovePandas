@@ -4,60 +4,56 @@ using UnityEngine;
 
 namespace LovePandas.View
 {
-    /// Временная панда из примитивов с сокетами под слоты одежды (GDD 8.2).
-    /// Когда придёт модель от художника, сокеты станут костями рига, а предметы — префабами.
+    /// Панда на сцене: модель из Resources/Models (Art/build_panda.py), одежда на сокетах скелета
+    /// и «оживление» кодом — дыхание, голова, уши, хвост, лапки, прыжок радости.
     public class CharacterView : MonoBehaviour
     {
-        readonly Dictionary<Slot, Transform> sockets = new Dictionary<Slot, Transform>();
-        readonly Dictionary<Slot, GameObject> worn = new Dictionary<Slot, GameObject>();
-        Transform body;
-        float joyUntil;
+        const float Scale = 2.2f;   // модель ≈ 1 м без шляпы, камера рассчитана на рост ≈ 2.2
+        const float Yaw = 0f;       // после запекания осей модель уже смотрит на камеру (−Z)
 
-        static readonly Color Fur = new Color(0.80f, 0.36f, 0.16f);
-        static readonly Color Cream = new Color(0.98f, 0.92f, 0.84f);
-        static readonly Color Dark = new Color(0.22f, 0.13f, 0.10f);
+        // Куда цепляется слот. Предмет может переопределить сокет (накидка — слот Back, но крепится к шее).
+        static readonly Dictionary<Slot, string> SlotSockets = new Dictionary<Slot, string>
+        {
+            { Slot.Head, "Socket_Head" }, { Slot.Face, "Socket_Face" }, { Slot.Neck, "Socket_Neck" },
+            { Slot.Body, "Socket_Neck" }, { Slot.Legs, "Hips" }, { Slot.Hands, "Socket_Hand_R" },
+            { Slot.Tail, "Socket_Tail" }, { Slot.Back, "Socket_Back" },
+        };
+        static readonly Dictionary<string, string> ItemSockets = new Dictionary<string, string>
+        {
+            { "cape_cream", "Socket_Neck" }, { "scarf_teal", "Socket_Neck" },
+        };
+
+        string characterId;
+        Transform model;
+        readonly Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
+        readonly Dictionary<Slot, GameObject> worn = new Dictionary<Slot, GameObject>();
+        readonly List<Joint> joints = new List<Joint>();
+        Joint spine, head, earL, earR, armL, armR;
+        readonly Joint[] tail = new Joint[4];
+        Transform hips;
+        float joyUntil, nextTwitch, twitchUntil;
+        int twitchSide;
+
+        /// Кость с запомненной позой покоя и осями персонажа в её локальных координатах.
+        class Joint
+        {
+            public Transform t;
+            public Quaternion rest;
+            public Vector3 right, up, forward;
+            public void Pose(float pitch, float yaw, float roll) =>
+                t.localRotation = rest * Quaternion.AngleAxis(pitch, right) * Quaternion.AngleAxis(yaw, up) * Quaternion.AngleAxis(roll, forward);
+        }
 
         public static CharacterView Create(Transform parent)
         {
             var go = new GameObject("Character");
             go.transform.SetParent(parent, false);
-            var view = go.AddComponent<CharacterView>();
-            view.Build();
-            return view;
+            return go.AddComponent<CharacterView>();
         }
 
-        void Build()
-        {
-            body = new GameObject("Body").transform;
-            body.SetParent(transform, false);
-
-            var torso = Part(PrimitiveType.Capsule, body, new Vector3(0, 0.75f, 0), new Vector3(0.9f, 0.75f, 0.8f), Fur);
-            Part(PrimitiveType.Sphere, body, new Vector3(0, 0.7f, 0.3f), new Vector3(0.6f, 0.7f, 0.3f), Dark); // живот
-            var head = Part(PrimitiveType.Sphere, body, new Vector3(0, 1.75f, 0), new Vector3(0.95f, 0.85f, 0.85f), Fur);
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(0, -0.15f, 0.4f), new Vector3(0.55f, 0.4f, 0.3f), Cream);
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(0, -0.08f, 0.55f), Vector3.one * 0.12f, Dark); // нос
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(-0.2f, 0.12f, 0.45f), Vector3.one * 0.12f, Dark);
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(0.2f, 0.12f, 0.45f), Vector3.one * 0.12f, Dark);
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(-0.38f, 0.45f, 0), new Vector3(0.28f, 0.3f, 0.15f), Cream);
-            Part(PrimitiveType.Sphere, head.transform, new Vector3(0.38f, 0.45f, 0), new Vector3(0.28f, 0.3f, 0.15f), Cream);
-            Part(PrimitiveType.Sphere, body, new Vector3(-0.5f, 0.8f, 0.15f), Vector3.one * 0.3f, Dark);
-            var handR = Part(PrimitiveType.Sphere, body, new Vector3(0.5f, 0.8f, 0.15f), Vector3.one * 0.3f, Dark);
-            var tail = Part(PrimitiveType.Capsule, body, new Vector3(0, 0.5f, -0.6f), new Vector3(0.3f, 0.45f, 0.3f), Fur);
-            tail.transform.localRotation = Quaternion.Euler(-60, 0, 0);
-
-            sockets[Slot.Head] = Socket("Head", head.transform, new Vector3(0, 0.5f, 0));
-            sockets[Slot.Face] = Socket("Face", head.transform, new Vector3(0, 0.12f, 0.52f));
-            sockets[Slot.Neck] = Socket("Neck", body, new Vector3(0, 1.3f, 0));
-            sockets[Slot.Body] = Socket("Body", torso.transform, Vector3.zero);
-            sockets[Slot.Legs] = Socket("Legs", body, new Vector3(0, 0.25f, 0));
-            sockets[Slot.Hands] = Socket("Hands", handR.transform, Vector3.zero);
-            sockets[Slot.Tail] = Socket("Tail", tail.transform, new Vector3(0, 0.5f, 0));
-            sockets[Slot.Back] = Socket("Back", body, new Vector3(0, 0.95f, -0.45f));
-        }
-
-        /// Надеть всё по данным игрока; лишнее снять.
         public void Apply(Player player, System.Func<string, ItemDef> lookup)
         {
+            SetCharacter(string.IsNullOrEmpty(player.characterId) ? "red_panda_m" : player.characterId);
             foreach (Slot slot in System.Enum.GetValues(typeof(Slot)))
             {
                 var itemId = player.GetEquipped(slot);
@@ -67,40 +63,100 @@ namespace LovePandas.View
                     if (current != null) Destroy(current);
                     worn.Remove(slot);
                 }
-                if (itemId != null) worn[slot] = MakeItem(lookup(itemId));
+                var def = lookup(itemId);
+                if (def != null) worn[slot] = MakeItem(def);
             }
         }
 
-        public void PlayJoy() => joyUntil = Time.time + 1.2f;
+        public void PlayJoy() => joyUntil = Time.time + 1.4f;
 
-        void Update()
+        // ---------- Модель ----------
+
+        void SetCharacter(string id)
         {
-            // Дыхание и прыжок радости — заменятся Animator-ом с настоящими анимациями.
-            float t = Time.time;
-            float breathe = 1f + Mathf.Sin(t * 2f) * 0.02f;
-            float hop = joyUntil > t ? Mathf.Abs(Mathf.Sin((joyUntil - t) * 8f)) * 0.35f : 0f;
-            body.localScale = new Vector3(1f, breathe, 1f);
-            body.localPosition = new Vector3(0, hop, 0);
+            if (id == characterId && model != null) return;
+            characterId = id;
+            if (model != null) Destroy(model.gameObject);
+            worn.Clear();
+            bones.Clear();
+            joints.Clear();
+
+            var prefab = Resources.Load<GameObject>(id == "red_panda_f" ? "Models/panda_f" : "Models/panda_m");
+            model = Instantiate(prefab, transform).transform;
+            model.localScale = Vector3.one * Scale;
+            model.localRotation = Quaternion.Euler(0, Yaw, 0);
+            foreach (var r in model.GetComponentsInChildren<Renderer>()) Toon(r);
+            foreach (var t in model.GetComponentsInChildren<Transform>()) bones[t.name] = t;
+
+            hips = Bone("Hips");
+            spine = MakeJoint("Spine"); head = MakeJoint("Head");
+            earL = MakeJoint("Ear_L"); earR = MakeJoint("Ear_R");
+            armL = MakeJoint("Arm_L"); armR = MakeJoint("Arm_R");
+            for (int i = 0; i < 4; i++) tail[i] = MakeJoint("Tail_" + (i + 1));
         }
+
+        Transform Bone(string name) => bones.TryGetValue(name, out var t) ? t : null;
+
+        Joint MakeJoint(string name)
+        {
+            var t = Bone(name);
+            if (t == null) return null;
+            var inv = Quaternion.Inverse(t.rotation);
+            var j = new Joint
+            {
+                t = t, rest = t.localRotation,
+                right = inv * model.right, up = inv * model.up, forward = inv * model.forward,
+            };
+            joints.Add(j);
+            return j;
+        }
+
+        static void Toon(Renderer r)
+        {
+            var mats = new Material[r.sharedMaterials.Length == 0 ? 1 : r.sharedMaterials.Length];
+            for (int i = 0; i < mats.Length; i++) mats[i] = Materials.Lit(Color.white);
+            r.sharedMaterials = mats;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
+        }
+
+        // ---------- Одежда ----------
 
         GameObject MakeItem(ItemDef item)
         {
-            if (item == null) return null;
-            var color = RarityColor(item.Rarity);
-            var socket = sockets[item.Slot];
-            GameObject go;
-            switch (item.Slot)
+            var socketName = ItemSockets.TryGetValue(item.id, out var s) ? s : SlotSockets[item.Slot];
+            var socket = Bone(socketName) ?? model;
+            // Контейнер: собственный поворот и масштаб FBX (конвертация осей Blender) остаются внутри нетронутыми.
+            var go = new GameObject(item.id);
+            var prefab = Resources.Load<GameObject>("Models/Items/" + item.id);
+            if (prefab != null)
             {
-                case Slot.Head:  go = Part(PrimitiveType.Cylinder, socket, Vector3.zero, new Vector3(0.6f, 0.12f, 0.6f), color); break;
-                case Slot.Face:  go = Part(PrimitiveType.Cube, socket, Vector3.zero, new Vector3(0.7f, 0.12f, 0.05f), color); break;
-                case Slot.Neck:  go = Part(PrimitiveType.Cylinder, socket, Vector3.zero, new Vector3(0.75f, 0.06f, 0.7f), color); break;
-                case Slot.Body:  go = Part(PrimitiveType.Capsule, socket, Vector3.zero, new Vector3(1.08f, 0.85f, 1.08f), color); break;
-                case Slot.Legs:  go = Part(PrimitiveType.Cylinder, socket, Vector3.zero, new Vector3(0.85f, 0.18f, 0.75f), color); break;
-                case Slot.Hands: go = Part(PrimitiveType.Sphere, socket, Vector3.zero, Vector3.one * 1.25f, color); break;
-                case Slot.Tail:  go = Part(PrimitiveType.Sphere, socket, Vector3.zero, new Vector3(1.3f, 0.5f, 1.3f), color); break;
-                default:         go = Part(PrimitiveType.Cube, socket, Vector3.zero, new Vector3(0.55f, 0.6f, 0.25f), color); break;
+                var inner = Instantiate(prefab, go.transform, false);
+                foreach (var r in inner.GetComponentsInChildren<Renderer>()) Toon(r);
             }
-            go.name = item.id;
+            else
+            {
+                Placeholder(item).transform.SetParent(go.transform, false);
+            }
+
+            // Предмет смоделирован в координатах персонажа с origin в точке сокета:
+            // та же ориентация и масштаб, что у модели, позиция — в сокете. Дальше едет вместе с костью.
+            var t = go.transform;
+            t.SetParent(socket, false);
+            t.position = socket.position;
+            t.rotation = model.rotation;
+            t.localScale = Vector3.one;
+            t.localScale = Vector3.one * (model.lossyScale.x / t.lossyScale.x);
+            return go;
+        }
+
+        /// Предмет, у которого ещё нет модели: цветной кружок нужной редкости.
+        static GameObject Placeholder(ItemDef item)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Destroy(go.GetComponent<Collider>());
+            go.GetComponent<Renderer>().sharedMaterial = Materials.Lit(RarityColor(item.Rarity));
+            go.transform.localScale = Vector3.one * 0.08f;
             return go;
         }
 
@@ -116,23 +172,36 @@ namespace LovePandas.View
             }
         }
 
-        static Transform Socket(string name, Transform parent, Vector3 pos)
-        {
-            var s = new GameObject("Socket_" + name).transform;
-            s.SetParent(parent, false);
-            s.localPosition = pos;
-            return s;
-        }
+        // ---------- Оживление ----------
 
-        static GameObject Part(PrimitiveType type, Transform parent, Vector3 pos, Vector3 scale, Color color)
+        void Update()
         {
-            var go = GameObject.CreatePrimitive(type);
-            Destroy(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = Materials.Lit(color);
-            return go;
+            if (model == null) return;
+            float t = Time.time;
+            float joy = joyUntil > t ? Mathf.Clamp01((joyUntil - t) / 1.4f) : 0f;
+            float joyWave = joy > 0 ? Mathf.Sin((1.4f - (joyUntil - t)) * 9f) : 0f;
+
+            // дыхание и прыжок радости
+            if (hips != null) hips.localScale = new Vector3(1, 1 + Mathf.Sin(t * 2.2f) * 0.018f, 1);
+            float hop = joy > 0 ? Mathf.Abs(joyWave) * 0.35f * joy : 0f;
+            model.localPosition = new Vector3(0, hop, 0);
+
+            spine?.Pose(Mathf.Sin(t * 2.2f) * 1.5f, Mathf.Sin(t * 0.6f) * 3f, 0);
+            head?.Pose(Mathf.Sin(t * 1.1f) * 2.5f, Mathf.Sin(t * 0.45f) * 6f, Mathf.Sin(t * 0.8f) * 4f + joy * 8f);
+
+            // уши иногда подёргиваются
+            if (t > nextTwitch) { twitchSide = Random.value > 0.5f ? 1 : -1; twitchUntil = t + 0.25f; nextTwitch = t + Random.Range(2.5f, 6f); }
+            float twitch = twitchUntil > t ? Mathf.Sin((twitchUntil - t) / 0.25f * Mathf.PI) * 18f : 0f;
+            earL?.Pose(0, 0, Mathf.Sin(t * 1.3f) * 2f + (twitchSide > 0 ? twitch : 0));
+            earR?.Pose(0, 0, -Mathf.Sin(t * 1.3f) * 2f - (twitchSide < 0 ? twitch : 0));
+
+            // лапки: лёгкое покачивание, в радости — вверх
+            armL?.Pose(Mathf.Sin(t * 1.6f) * 4f, 0, -joy * 70f);
+            armR?.Pose(-Mathf.Sin(t * 1.6f) * 4f, 0, joy * 70f);
+
+            // хвост волной по цепочке
+            for (int i = 0; i < tail.Length; i++)
+                tail[i]?.Pose(Mathf.Sin(t * 1.4f - i * 0.6f) * 4f, Mathf.Sin(t * 1.1f - i * 0.7f) * (6f + i * 2f) * (1 + joy * 2f), 0);
         }
     }
 }

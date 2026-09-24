@@ -20,7 +20,6 @@ namespace LovePandas.App
             var world = new GameObject("World").transform;
             BuildLocation(world);
             var character = CharacterView.Create(world);
-            character.transform.localRotation = Quaternion.Euler(0, 180, 0);
 
             // Адрес сервера — Resources/server_url.txt; для тестов на ПК -lpServer, -lpProfile (второй игрок
             // на той же машине), -lpToken (войти готовым игроком).

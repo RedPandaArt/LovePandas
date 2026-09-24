@@ -15,6 +15,14 @@ const item = (id: string, name: string, slot: Slot, rarity: Rarity, price: numbe
   ({ id, name, slot, rarity, price });
 
 export const CATALOG: Item[] = [
+  // Стартовые наряды (есть 3D-модели, Art/build_panda.py). Выдаются бесплатно при выборе персонажа.
+  item("hat_wanderer", "Шляпа странника", "Head", "Uncommon", 300),
+  item("scarf_teal", "Бирюзовый шарф", "Neck", "Common", 90),
+  item("staff_lantern", "Посох с фонарём", "Hands", "Rare", 650),
+  item("hat_witch", "Шляпа волшебницы", "Head", "Uncommon", 300),
+  item("cape_cream", "Кремовая накидка", "Back", "Uncommon", 260),
+  item("bow_pink", "Розовый бант", "Neck", "Common", 80),
+  item("wand_star", "Палочка-звезда", "Hands", "Rare", 650),
   item("head_beanie", "Бини", "Head", "Common", 60),
   item("head_bow", "Бантик", "Head", "Common", 50),
   item("head_wreath", "Венок из цветов", "Head", "Uncommon", 250),
@@ -34,3 +42,9 @@ export const CATALOG: Item[] = [
 export const CATALOG_BY_ID = new Map(CATALOG.map((i) => [i.id, i]));
 
 export const CHARACTERS = ["red_panda_m", "red_panda_f"];
+
+/// Наряд с концепта персонажа — выдаётся и надевается при первом выборе персонажа.
+export const STARTER_OUTFIT: Record<string, string[]> = {
+  red_panda_m: ["hat_wanderer", "scarf_teal", "staff_lantern"],
+  red_panda_f: ["hat_witch", "cape_cream", "bow_pink", "wand_star"],
+};

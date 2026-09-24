@@ -78,16 +78,31 @@ test("без партнёра задания не ставятся, третий
 
 test("магазин: покупка, надевание, нехватка монет", () => {
   const { game, A } = setup();
+  type Me = { coins: number; equipped: { slot: string; itemId: string }[] };
+  const head = (m: Me) => m.equipped.find((e) => e.slot === "Head")?.itemId;
   game.buy(A(), "head_bow");
-  let me = game.state(A()).me as { coins: number; equipped: { slot: string }[] };
+  let me = game.state(A()).me as Me;
   assert.equal(me.coins, START_COINS - 50);
-  assert.equal(me.equipped[0].slot, "Head");
+  assert.equal(head(me), "head_bow"); // купил — сразу надел вместо стартовой шляпы
   game.toggleEquip(A(), "head_bow");
-  me = game.state(A()).me as typeof me;
-  assert.equal(me.equipped.length, 0);
+  me = game.state(A()).me as Me;
+  assert.equal(head(me), undefined);
   assert.throws(() => game.buy(A(), "head_bow"), /Уже/);
   assert.throws(() => game.buy(A(), "head_crown"), /Не хватает/);
   assert.throws(() => game.toggleEquip(A(), "head_crown"), /нет/);
+});
+
+test("стартовый наряд выдаётся один раз при выборе персонажа", () => {
+  const game = new Game(openDb(":memory:"));
+  const t = game.register().token;
+  game.setProfile(game.auth(t), "Аля", "red_panda_f");
+  let me = game.state(game.auth(t)).me as { coins: number; inventory: string[]; equipped: unknown[] };
+  assert.deepEqual([...me.inventory].sort(), ["bow_pink", "cape_cream", "hat_witch", "wand_star"]);
+  assert.equal(me.equipped.length, 4);
+  assert.equal(me.coins, START_COINS);
+  game.setProfile(game.auth(t), "Аля", "red_panda_m"); // смена персонажа — без второго подарка
+  me = game.state(game.auth(t)).me as typeof me;
+  assert.equal(me.inventory.length, 4);
 });
 
 test("ежедневный бонус раз в день", () => {

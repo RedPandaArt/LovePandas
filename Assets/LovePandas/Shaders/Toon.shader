@@ -41,8 +41,9 @@ Shader "LovePandas/Toon"
             #pragma vertex vert
             #pragma fragment frag
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
-            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 viewWS : TEXCOORD2; };
+            // Окрас моделей из Blender — цвета вершин. Альфа вершины < 1 — свечение (фонарь, звезда, блик в глазу).
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; half4 color : COLOR; };
+            struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; float3 normalWS : TEXCOORD1; float3 viewWS : TEXCOORD2; half4 color : COLOR; };
 
             Varyings vert (Attributes v)
             {
@@ -52,24 +53,27 @@ Shader "LovePandas/Toon"
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.viewWS = GetWorldSpaceViewDir(posWS);
                 o.uv = TRANSFORM_TEX(v.uv, _BaseMap);
+                o.color = v.color;
                 return o;
             }
 
             half4 frag (Varyings i) : SV_Target
             {
                 Light light = GetMainLight();
+                half glow = 1 - i.color.a;
                 float3 n = normalize(i.normalWS);
                 float3 v = normalize(i.viewWS);
                 half ndl = dot(n, light.direction);
                 half lit = smoothstep(_ShadeStep - _ShadeSoftness, _ShadeStep + _ShadeSoftness, ndl);
 
-                half4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv) * _BaseColor;
+                half4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv) * _BaseColor * half4(i.color.rgb, 1);
                 half3 shade = albedo.rgb * _ShadeColor.rgb;
                 half3 col = lerp(shade, albedo.rgb * light.color, lit);
                 col += albedo.rgb * SampleSH(n) * 0.35;
 
                 half rim = pow(saturate(1 - dot(n, v)), _RimPower) * _RimStrength;
                 col += _RimColor.rgb * rim * (0.35 + 0.65 * lit);
+                col = lerp(col, albedo.rgb * 2.2, glow); // светящиеся части ярче порога bloom
                 return half4(col, 1);
             }
             ENDHLSL

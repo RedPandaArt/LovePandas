@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { randomBytes, randomUUID } from "node:crypto";
-import { CATALOG, CATALOG_BY_ID, CHARACTERS } from "./catalog.ts";
+import { CATALOG, CATALOG_BY_ID, CHARACTERS, STARTER_OUTFIT } from "./catalog.ts";
 import type { Slot } from "./catalog.ts";
 import { tx } from "./db.ts";
 
@@ -78,6 +78,14 @@ export class Game {
     if (typeof characterId !== "string" || !CHARACTERS.includes(characterId)) throw new GameError("Нет такого персонажа");
     tx(this.db, () => {
       this.db.prepare("UPDATE players SET name = ?, character_id = ? WHERE id = ?").run(n, characterId, me.id);
+      // Первый выбор персонажа — наряд с концепта в подарок. Смена персонажа потом наряд не дублирует.
+      if (!me.character_id) {
+        for (const itemId of STARTER_OUTFIT[characterId] ?? []) {
+          const item = CATALOG_BY_ID.get(itemId)!;
+          this.db.prepare("INSERT OR IGNORE INTO inventory (player_id, item_id) VALUES (?, ?)").run(me.id, itemId);
+          this.db.prepare("INSERT OR REPLACE INTO equipped (player_id, slot, item_id) VALUES (?, ?, ?)").run(me.id, item.slot, itemId);
+        }
+      }
       this.bump(me.couple_id);
     });
   }
