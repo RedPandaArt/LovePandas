@@ -27,8 +27,9 @@
 `Art/build_ui.py` — 3D-интерфейс и окружение: доска инвентаря `Models/UI/board.fbx` (пустышки `Slot_0..5`,
 `Tab_0..3`, `Close` — точки для вещей, медальонов и крестика), кольцо подсветки `ring.fbx`, платформа `Models/Env/platform.fbx`.
 
-Текстуры из ComfyUI (Flux Krea): фон `Resources/Backgrounds`, плиты платформы `Resources/Textures/stone.png`,
-листья `Resources/Foliage` (вырезаны из белого фона заливкой от краёв). Исходники генераций — `docs/concepts/`.
+Текстуры из ComfyUI (Flux Krea): фон `Resources/Backgrounds`, плиты платформы `Resources/Textures/stone.png`.
+Исходники генераций — `docs/concepts/`. Отдельные спрайты листвы перед фоном пробовали и убрали — смотрелись
+чужеродно; живость фону даёт только ветер в шейдере (`_Wind`) и дрейф камеры.
 
 ## Сервер (`server/`)
 

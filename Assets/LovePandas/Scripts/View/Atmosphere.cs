@@ -50,8 +50,6 @@ namespace LovePandas.View
             blob.localRotation = Quaternion.Euler(90, 0, 0);
             blob.localScale = new Vector3(1.6f, 1.1f, 1);
 
-            Foliage.Create(world);
-
             Dust(world);
             PostFX();
         }
