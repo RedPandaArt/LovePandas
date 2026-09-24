@@ -24,6 +24,12 @@
 - В Unity предмет вешается через контейнер (`CharacterView.MakeItem`): внутренний поворот FBX не трогать.
 - Новый предмет с моделью: функция `item_*` в скрипте + запись в `server/src/catalog.ts`.
 
+`Art/build_ui.py` — 3D-интерфейс и окружение: доска инвентаря `Models/UI/board.fbx` (пустышки `Slot_0..5`,
+`Tab_0..3`, `Close` — точки для вещей, медальонов и крестика), кольцо подсветки `ring.fbx`, платформа `Models/Env/platform.fbx`.
+
+Текстуры из ComfyUI (Flux Krea): фон `Resources/Backgrounds`, плиты платформы `Resources/Textures/stone.png`,
+листья `Resources/Foliage` (вырезаны из белого фона заливкой от краёв). Исходники генераций — `docs/concepts/`.
+
 ## Сервер (`server/`)
 
 Node 24 + TypeScript (запускается напрямую, без сборки) + встроенный `node:sqlite`. Зависимостей нет.
