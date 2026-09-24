@@ -168,6 +168,18 @@
 }
 .hidden { display: none; }
 
+/* Метка dev-сборки (LP_DEV) */
+.dev-badge {
+    position: absolute;
+    left: 32px; top: 130px;
+    padding: 6px 16px;
+    border-radius: 16px;
+    background-color: rgba(200, 30, 60, 0.85);
+    color: rgb(255, 255, 255);
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
 /* ---------- Первый вход ---------- */
 .onboard-card { height: auto; padding-bottom: 72px; }
 .onboard-card > .sheet-title { margin-bottom: 20px; white-space: normal; }

@@ -225,6 +225,13 @@ namespace LovePandas.UI
             overlay.AddToClassList("sheet-backdrop");
             root.Add(overlay);
 
+#if LP_DEV
+            var dev = new Label("DEV · сервер на ПК");
+            dev.AddToClassList("dev-badge");
+            dev.pickingMode = PickingMode.Ignore;
+            root.Add(dev);
+#endif
+
             toast = new Label();
             toast.AddToClassList("toast");
             toast.AddToClassList("hidden");

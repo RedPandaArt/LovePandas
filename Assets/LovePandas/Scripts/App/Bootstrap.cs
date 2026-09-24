@@ -23,7 +23,12 @@ namespace LovePandas.App
 
             // Адрес сервера — Resources/server_url.txt; для тестов на ПК -lpServer, -lpProfile (второй игрок
             // на той же машине), -lpToken (войти готовым игроком).
-            var url = Args.Get("-lpServer") ?? Resources.Load<TextAsset>("server_url").text.Trim();
+#if LP_DEV
+            const string urlFile = "server_url_dev"; // dev-сборка: сервер на ПК в локальной сети
+#else
+            const string urlFile = "server_url";
+#endif
+            var url = Args.Get("-lpServer") ?? Resources.Load<TextAsset>(urlFile).text.Trim();
             var api = new ApiClient(url, Args.Get("-lpProfile") ?? "default", Args.Get("-lpToken"));
             var game = new GameService(api);
             var ui = new GameObject("UI").AddComponent<AppUI>();

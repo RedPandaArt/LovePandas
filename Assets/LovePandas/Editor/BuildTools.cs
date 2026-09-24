@@ -95,21 +95,43 @@ namespace LovePandas.Editor
         }
 
         [MenuItem("LovePandas/Build Android APK")]
-        public static void BuildAndroid()
+        public static void BuildAndroid() => Android(dev: false);
+
+        /// Dev-сборка: отдельное приложение «LovePandas Dev» рядом с боевым, ходит на сервер на ПК
+        /// (Resources/server_url_dev.txt) по http, в углу метка DEV. Для быстрых проверок без выката на Railway.
+        [MenuItem("LovePandas/Build Android DEV APK")]
+        public static void BuildAndroidDev() => Android(dev: true);
+
+        static void Android(bool dev)
         {
             Setup();
-            Directory.CreateDirectory(Path.GetDirectoryName(ApkPath));
-            EditorUserBuildSettings.buildAppBundle = false;
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            if (dev)
             {
-                scenes = new[] { ScenePath },
-                locationPathName = ApkPath,
-                target = BuildTarget.Android,
-                options = BuildOptions.None,
-            });
-            Debug.Log($"[LovePandas] Build {report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB");
-            if (Application.isBatchMode)
-                EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+                PlayerSettings.productName = "LovePandas Dev";
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.redpandaart.lovepandas.dev");
+                PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+            }
+            var path = dev ? "Builds/LovePandas-dev.apk" : ApkPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            EditorUserBuildSettings.buildAppBundle = false;
+            try
+            {
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { ScenePath },
+                    locationPathName = path,
+                    target = BuildTarget.Android,
+                    options = dev ? BuildOptions.Development : BuildOptions.None,
+                    extraScriptingDefines = dev ? new[] { "LP_DEV" } : null,
+                });
+                Debug.Log($"[LovePandas] Build {(dev ? "DEV " : "")}{report.summary.result}, {report.summary.totalSize / (1024 * 1024)} MB");
+                if (Application.isBatchMode)
+                    EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+            }
+            finally
+            {
+                if (dev) Setup(); // вернуть боевые настройки, чтобы они не попали в git
+            }
         }
     }
 }
