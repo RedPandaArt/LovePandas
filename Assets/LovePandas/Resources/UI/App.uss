@@ -168,6 +168,85 @@
 }
 .hidden { display: none; }
 
+/* ---------- Крестик закрытия (две полоски вместо символа ✕) ---------- */
+.close-btn { align-items: center; justify-content: center; padding: 0; }
+.x-bar {
+    position: absolute;
+    width: 42px; height: 6px;
+    border-radius: 3px;
+    background-color: rgb(74, 46, 36);
+}
+.x-bar-a { rotate: 45deg; }
+.x-bar-b { rotate: -45deg; }
+
+/* ---------- Инвентарь: дощечка слева ---------- */
+.inv-panel {
+    position: absolute;
+    left: 0; top: 140px; bottom: 20px;
+    width: 56%;
+    -unity-background-scale-mode: stretch-to-fill;
+    padding: 70px 44px 70px 40px;
+}
+.inv-header { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.inv-title {
+    font-size: 46px;
+    -unity-font-style: bold;
+    color: rgb(255, 246, 228);
+    text-shadow: 0 3px 4px rgba(60, 30, 10, 0.8);
+}
+.inv-panel .close-btn { width: 80px; height: 80px; border-radius: 40px; background-color: rgba(255, 240, 220, 0.9); }
+.inv-tabs { flex-direction: row; flex-wrap: wrap; margin-bottom: 14px; }
+.inv-tab {
+    width: 48%;
+    height: 72px;
+    margin: 0 1% 10px 1%;
+    border-radius: 24px;
+    border-width: 0;
+    background-color: rgba(70, 40, 20, 0.55);
+    color: rgb(255, 240, 220);
+    font-size: 28px;
+    -unity-font-style: bold;
+}
+.inv-tab.selected { background-color: rgb(232, 110, 72); color: rgb(255, 255, 255); }
+.inv-list { flex-grow: 1; }
+.inv-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.inv-card {
+    width: 48%;
+    height: 250px;
+    margin: 0 0 14px 0;
+    padding: 10px;
+    border-radius: 26px;
+    border-width: 5px;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: rgba(255, 248, 236, 0.9);
+    align-items: center;
+    justify-content: space-between;
+}
+.inv-card.locked { background-color: rgba(225, 215, 200, 0.82); }
+.inv-card.equipped { border-color: rgb(232, 110, 72); }
+.inv-card.trying { border-color: rgb(40, 170, 160); }
+.inv-icon { width: 170px; height: 160px; -unity-background-scale-mode: scale-to-fit; border-radius: 75px; }
+.inv-name { font-size: 24px; -unity-text-align: middle-center; white-space: normal; color: rgb(74, 46, 36); }
+.inv-card.locked .inv-name { color: rgb(120, 105, 95); }
+.inv-price {
+    flex-direction: row; align-items: center;
+    padding: 2px 14px;
+    border-radius: 16px;
+    background-color: rgb(74, 46, 36);
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 214, 120);
+}
+.inv-price .coin { width: 24px; height: 24px; margin-right: 6px; border-width: 3px; }
+.inv-badge { font-size: 22px; -unity-font-style: bold; color: rgb(232, 110, 72); }
+.inv-card.trying .inv-badge { color: rgb(40, 150, 140); }
+.inv-buy { padding-top: 12px; align-items: stretch; }
+.inv-buy-label { font-size: 26px; color: rgb(255, 246, 228); -unity-text-align: middle-center; margin-bottom: 8px; text-shadow: 0 2px 3px rgba(60, 30, 10, 0.8); }
+.inv-buy-btn { height: 96px; margin: 0; font-size: 34px; border-radius: 32px; }
+.inv-buy-btn:disabled { background-color: rgb(150, 130, 120); }
+.inv-rotate { position: absolute; left: 56%; right: 0; top: 140px; bottom: 0; }
+.inv-open .toast { left: 58%; right: 16px; top: 150px; font-size: 28px; }
+
 /* Метка dev-сборки (LP_DEV) */
 .dev-badge {
     position: absolute;
@@ -197,7 +276,9 @@
     font-size: 38px;
     -unity-font-style: bold;
 }
-.choice-btn.selected { border-color: rgb(232, 110, 72); }
+/* стандартная подсветка наведения/фокуса Unity выглядела как «уже выбрано» — гасим её */
+.choice-btn:hover, .choice-btn:focus, .choice-btn:active { border-color: rgba(0, 0, 0, 0); background-color: rgb(255, 255, 255); }
+.choice-btn.selected, .choice-btn.selected:hover, .choice-btn.selected:focus { border-color: rgb(232, 110, 72); }
 .invite-code {
     font-size: 110px;
     -unity-font-style: bold;

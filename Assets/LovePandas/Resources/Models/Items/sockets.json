@@ -1,0 +1,64 @@
+{
+ "entries": [
+  {
+   "item": "bamboo_staff",
+   "socket": "Socket_Hand_R"
+  },
+  {
+   "item": "boots_brown",
+   "socket": "Socket_Feet"
+  },
+  {
+   "item": "boots_pink",
+   "socket": "Socket_Feet"
+  },
+  {
+   "item": "boots_yellow",
+   "socket": "Socket_Feet"
+  },
+  {
+   "item": "bow_pink",
+   "socket": "Socket_Neck"
+  },
+  {
+   "item": "cape_cream",
+   "socket": "Socket_Neck"
+  },
+  {
+   "item": "cape_red",
+   "socket": "Socket_Neck"
+  },
+  {
+   "item": "hat_beanie",
+   "socket": "Socket_Head"
+  },
+  {
+   "item": "hat_crown",
+   "socket": "Socket_Head"
+  },
+  {
+   "item": "hat_wanderer",
+   "socket": "Socket_Head"
+  },
+  {
+   "item": "hat_witch",
+   "socket": "Socket_Head"
+  },
+  {
+   "item": "scarf_teal",
+   "socket": "Socket_Neck"
+  },
+  {
+   "item": "staff_lantern",
+   "socket": "Socket_Hand_R"
+  },
+  {
+   "item": "sword_wood",
+   "socket": "Socket_Hand_R"
+  },
+  {
+   "item": "wand_star",
+   "socket": "Socket_Hand_R"
+  }
+ ]
+}

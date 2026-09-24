@@ -47,6 +47,7 @@ namespace LovePandas.App
             cam.fieldOfView = 40;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.1f, 0.2f, 0.2f);
+            cam.gameObject.AddComponent<CameraRig>();
 
             // Солнце сверху-слева, как луч на фоне; тёплое. Бирюзовый заполняющий свет — цвет джунглей.
             var sun = new GameObject("Sun").AddComponent<Light>();

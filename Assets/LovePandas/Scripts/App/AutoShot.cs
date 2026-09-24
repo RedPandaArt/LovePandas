@@ -27,6 +27,9 @@ namespace LovePandas.App
         IEnumerator Run()
         {
             System.IO.Directory.CreateDirectory(dir);
+            // дождаться подключения (экраны кроме онбординга открываются только с главного)
+            float until = Time.time + 12f;
+            while (!ui.IsHome && Time.time < until && screens[0] != "onboarding") yield return null;
             foreach (var screen in screens)
             {
                 ui.DebugOpen(screen);

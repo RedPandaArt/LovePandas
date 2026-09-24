@@ -80,16 +80,16 @@ test("магазин: покупка, надевание, нехватка мо�
   const { game, A } = setup();
   type Me = { coins: number; equipped: { slot: string; itemId: string }[] };
   const head = (m: Me) => m.equipped.find((e) => e.slot === "Head")?.itemId;
-  game.buy(A(), "head_bow");
+  game.buy(A(), "hat_beanie");
   let me = game.state(A()).me as Me;
-  assert.equal(me.coins, START_COINS - 50);
-  assert.equal(head(me), "head_bow"); // купил — сразу надел вместо стартовой шляпы
-  game.toggleEquip(A(), "head_bow");
+  assert.equal(me.coins, START_COINS - 60);
+  assert.equal(head(me), "hat_beanie"); // купил — сразу надел вместо стартовой шляпы
+  game.toggleEquip(A(), "hat_beanie");
   me = game.state(A()).me as Me;
   assert.equal(head(me), undefined);
-  assert.throws(() => game.buy(A(), "head_bow"), /Уже/);
-  assert.throws(() => game.buy(A(), "head_crown"), /Не хватает/);
-  assert.throws(() => game.toggleEquip(A(), "head_crown"), /нет/);
+  assert.throws(() => game.buy(A(), "hat_beanie"), /Уже/);
+  assert.throws(() => game.buy(A(), "hat_crown"), /Не хватает/);
+  assert.throws(() => game.toggleEquip(A(), "hat_crown"), /нет/);
 });
 
 test("стартовый наряд выдаётся один раз при выборе персонажа", () => {

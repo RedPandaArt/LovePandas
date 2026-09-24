@@ -11,18 +11,38 @@ namespace LovePandas.View
         const float Scale = 2.2f;   // модель ≈ 1 м без шляпы, камера рассчитана на рост ≈ 2.2
         const float Yaw = 0f;       // после запекания осей модель уже смотрит на камеру (−Z)
 
-        // Куда цепляется слот. Предмет может переопределить сокет (накидка — слот Back, но крепится к шее).
+        // Куда цепляется вещь — Models/Items/sockets.json (пишет Art/build_panda.py). Слот — запасной вариант.
         static readonly Dictionary<Slot, string> SlotSockets = new Dictionary<Slot, string>
         {
             { Slot.Head, "Socket_Head" }, { Slot.Face, "Socket_Face" }, { Slot.Neck, "Socket_Neck" },
             { Slot.Body, "Socket_Neck" }, { Slot.Legs, "Hips" }, { Slot.Hands, "Socket_Hand_R" },
-            { Slot.Tail, "Socket_Tail" }, { Slot.Back, "Socket_Back" },
+            { Slot.Tail, "Socket_Tail" }, { Slot.Back, "Socket_Back" }, { Slot.Feet, "Socket_Feet" },
         };
-        static readonly Dictionary<string, string> ItemSockets = new Dictionary<string, string>
-        {
-            { "cape_cream", "Socket_Neck" }, { "scarf_teal", "Socket_Neck" },
-        };
+        [System.Serializable] class SocketEntry { public string item; public string socket; }
+        [System.Serializable] class SocketList { public List<SocketEntry> entries; }
+        static Dictionary<string, string> itemSockets;
 
+        static string SocketFor(ItemDef item)
+        {
+            if (itemSockets == null)
+            {
+                itemSockets = new Dictionary<string, string>();
+                var json = Resources.Load<TextAsset>("Models/Items/sockets");
+                if (json != null)
+                    foreach (var e in JsonUtility.FromJson<SocketList>(json.text).entries) itemSockets[e.item] = e.socket;
+            }
+            return itemSockets.TryGetValue(item.id, out var s) ? s : SlotSockets[item.Slot];
+        }
+
+        /// Примерка: слот → вещь (null — снять). Перекрывает надетое с сервера, пока открыт инвентарь.
+        public readonly Dictionary<Slot, string> Preview = new Dictionary<Slot, string>();
+
+        /// Поворот, которым игрок крутит панду пальцем в инвентаре.
+        public float UserYaw;
+        float yaw;
+
+        Player lastPlayer;
+        System.Func<string, ItemDef> lastLookup;
         string characterId;
         Transform model;
         readonly Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
@@ -51,12 +71,20 @@ namespace LovePandas.View
             return go.AddComponent<CharacterView>();
         }
 
+        /// Перерисовать с последними данными (после изменения примерки).
+        public void Reapply()
+        {
+            if (lastPlayer != null) Apply(lastPlayer, lastLookup);
+        }
+
         public void Apply(Player player, System.Func<string, ItemDef> lookup)
         {
+            lastPlayer = player;
+            lastLookup = lookup;
             SetCharacter(string.IsNullOrEmpty(player.characterId) ? "red_panda_m" : player.characterId);
             foreach (Slot slot in System.Enum.GetValues(typeof(Slot)))
             {
-                var itemId = player.GetEquipped(slot);
+                var itemId = Preview.TryGetValue(slot, out var tryOn) ? tryOn : player.GetEquipped(slot);
                 if (worn.TryGetValue(slot, out var current))
                 {
                     if (current != null && current.name == itemId) continue;
@@ -124,8 +152,7 @@ namespace LovePandas.View
 
         GameObject MakeItem(ItemDef item)
         {
-            var socketName = ItemSockets.TryGetValue(item.id, out var s) ? s : SlotSockets[item.Slot];
-            var socket = Bone(socketName) ?? model;
+            var socket = Bone(SocketFor(item)) ?? model;
             // Контейнер: собственный поворот и масштаб FBX (конвертация осей Blender) остаются внутри нетронутыми.
             var go = new GameObject(item.id);
             var prefab = Resources.Load<GameObject>("Models/Items/" + item.id);
@@ -183,6 +210,8 @@ namespace LovePandas.View
             if (hips != null) hips.localScale = new Vector3(1, 1 + Mathf.Sin(t * 2.2f) * 0.018f, 1);
             float hop = joy > 0 ? Mathf.Abs(joyWave) * 0.35f * joy : 0f;
             model.localPosition = new Vector3(0, hop, 0);
+            yaw = Mathf.LerpAngle(yaw, UserYaw, 1 - Mathf.Exp(-Time.deltaTime * 12f));
+            model.localRotation = Quaternion.Euler(0, Yaw + yaw, 0);
 
             spine?.Pose(Mathf.Sin(t * 2.2f) * 1.5f, Mathf.Sin(t * 0.6f) * 3f, 0);
             head?.Pose(Mathf.Sin(t * 1.1f) * 2.5f, Mathf.Sin(t * 0.45f) * 6f, Mathf.Sin(t * 0.8f) * 4f + joy * 8f);

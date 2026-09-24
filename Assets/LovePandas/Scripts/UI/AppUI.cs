@@ -8,11 +8,12 @@ using UnityEngine.UIElements;
 
 namespace LovePandas.UI
 {
-    /// Весь интерфейс MVP: первый вход (профиль → пара), главный экран и шторки
-    /// «Доска», «Магазин», «Гардероб» (GDD, раздел 3). Собирается кодом, стили — Resources/UI/App.uss.
+    /// Весь интерфейс MVP: первый вход (профиль → пара), главный экран с двумя кнопками —
+    /// «Инвентарь» (InventoryPanel: дощечка слева, примерка и покупка) и «Заказы» (шторка с доской заданий).
+    /// Собирается кодом, стили — Resources/UI/App.uss.
     public class AppUI : MonoBehaviour
     {
-        enum Screen { None, Board, Shop, Wardrobe }
+        enum Screen { None, Board }
         enum Stage { Connecting, Offline, Profile, Pair, Home }
 
         const float PollSeconds = 4f;
@@ -21,6 +22,8 @@ namespace LovePandas.UI
         CharacterView character;
         VisualElement root, home, overlay, sheetHost;
         Label coinsLabel, partnerLabel, toast;
+        VisualElement nav;
+        InventoryPanel inventory;
         Screen open = Screen.None;
         Stage stage = Stage.Connecting;
         float toastUntil, nextPoll;
@@ -36,6 +39,10 @@ namespace LovePandas.UI
             root = doc.rootVisualElement;
             root.styleSheets.Add(Resources.Load<StyleSheet>("UI/App"));
             BuildHome();
+            inventory = new InventoryPanel(root, game, character, Run, Toast);
+            inventory.Closed += () => nav.RemoveFromClassList("hidden");
+            overlay.BringToFront();
+            toast.BringToFront();
 
             game.Changed += Refresh;
             await Connect();
@@ -103,6 +110,7 @@ namespace LovePandas.UI
                 return;
             }
             CloseSheet();
+            inventory?.Close();
             home.AddToClassList("hidden");
             overlay.RemoveFromClassList("hidden");
 
@@ -209,10 +217,9 @@ namespace LovePandas.UI
             top.Add(who);
             home.Add(top);
 
-            var nav = Row("nav");
-            nav.Add(Button("Доска", "nav-btn", () => OpenSheet(Screen.Board)));
-            nav.Add(Button("Магазин", "nav-btn", () => OpenSheet(Screen.Shop)));
-            nav.Add(Button("Гардероб", "nav-btn", () => OpenSheet(Screen.Wardrobe)));
+            nav = Row("nav");
+            nav.Add(Button("Инвентарь", "nav-btn", OpenInventory));
+            nav.Add(Button("Заказы", "nav-btn", () => OpenSheet(Screen.Board)));
             home.Add(nav);
 
             sheetHost = new VisualElement();
@@ -247,12 +254,14 @@ namespace LovePandas.UI
             character.Apply(s.me, game.Item);
             if (stage != Stage.Connecting && stage != Stage.Offline) Route();
             if (open != Screen.None) RenderSheet();
+            inventory?.Refresh();
         }
 
         // ---------- Шторки ----------
 
         void OpenSheet(Screen s)
         {
+            inventory.Close();
             open = s;
             sheetHost.RemoveFromClassList("hidden");
             // Камера рисует только полосу над шторкой (шторка — 62% высоты), панда остаётся видна.
@@ -284,10 +293,10 @@ namespace LovePandas.UI
             sheetHost.Add(sheet);
 
             var header = Row("sheet-header");
-            var title = new Label(open == Screen.Board ? "Доска заданий" : open == Screen.Shop ? "Магазин" : "Гардероб");
+            var title = new Label("Заказы");
             title.AddToClassList("sheet-title");
             header.Add(title);
-            header.Add(Button("✕", "close-btn", CloseSheet));
+            header.Add(CloseButton(CloseSheet));
             sheet.Add(header);
 
             var scroll = new ScrollView(ScrollViewMode.Vertical) { style = { flexGrow = 1 } };
@@ -296,8 +305,6 @@ namespace LovePandas.UI
             switch (open)
             {
                 case Screen.Board: RenderBoard(scroll, draftText, draftPrice); break;
-                case Screen.Shop: RenderItems(scroll, shop: true); break;
-                case Screen.Wardrobe: RenderItems(scroll, shop: false); break;
             }
 
             scroll.schedule.Execute(() =>
@@ -393,49 +400,31 @@ namespace LovePandas.UI
             }
         }
 
-        void RenderItems(VisualElement parent, bool shop)
+        void OpenInventory()
         {
-            var items = game.Catalog.Where(i => shop || game.Owns(i.id)).ToList();
-            if (!shop && items.Count == 0)
-            {
-                Empty(parent, "Гардероб пуст — загляни в магазин");
-                return;
-            }
-
-            var grid = Row("grid");
-            foreach (var item in items)
-            {
-                bool owned = game.Owns(item.id);
-                bool equipped = game.Me.GetEquipped(item.Slot) == item.id;
-
-                var cell = new Button();
-                cell.AddToClassList("item");
-                if (owned) cell.AddToClassList("owned");
-                if (equipped) cell.AddToClassList("equipped");
-
-                var swatch = new VisualElement { style = { backgroundColor = CharacterView.RarityColor(item.Rarity) } };
-                swatch.AddToClassList("item-swatch");
-                cell.Add(swatch);
-                var name = new Label(item.name);
-                name.AddToClassList("item-name");
-                cell.Add(name);
-                if (shop && !owned) cell.Add(Price(item.price, "item-price"));
-                else
-                {
-                    var state = new Label(shop ? "куплено" : equipped ? "надето" : "надеть");
-                    state.AddToClassList("item-price");
-                    cell.Add(state);
-                }
-
-                cell.clicked += () =>
-                {
-                    if (shop && !owned) Run(() => game.Buy(item), $"{item.name} — твоё!", character.PlayJoy);
-                    else Run(() => game.ToggleEquip(item), null);
-                };
-                grid.Add(cell);
-            }
-            parent.Add(grid);
+            if (stage != Stage.Home) return;
+            CloseSheet();
+            nav.AddToClassList("hidden");
+            inventory.Open();
         }
+
+        /// Крестик из двух повёрнутых полосок: символа ✕ нет в системном шрифте некоторых телефонов (Samsung).
+        public static Button CloseButton(Action onClick)
+        {
+            var b = new Button(onClick);
+            b.AddToClassList("close-btn");
+            foreach (var cls in new[] { "x-bar-a", "x-bar-b" })
+            {
+                var bar = new VisualElement { pickingMode = PickingMode.Ignore };
+                bar.AddToClassList("x-bar");
+                bar.AddToClassList(cls);
+                b.Add(bar);
+            }
+            return b;
+        }
+
+        /// Для AutoShot: подключились и дошли до главного экрана.
+        public bool IsHome => stage == Stage.Home;
 
         /// Для AutoShot: открыть экран по имени.
         public void DebugOpen(string screen)
@@ -444,8 +433,7 @@ namespace LovePandas.UI
             switch (screen)
             {
                 case "board": OpenSheet(Screen.Board); break;
-                case "shop": OpenSheet(Screen.Shop); break;
-                case "wardrobe": OpenSheet(Screen.Wardrobe); break;
+                case "inventory": OpenInventory(); break;
                 default: CloseSheet(); break;
             }
         }
@@ -453,7 +441,7 @@ namespace LovePandas.UI
         // ---------- Мелочи ----------
 
         /// Выполнить действие на сервере; пока ждём ответа, повторные нажатия игнорируются.
-        async void Run(Func<Task<string>> action, string success, Action onSuccess = null)
+        async Task Run(Func<Task<string>> action, string success, Action onSuccess = null)
         {
             if (busy) return;
             busy = true;

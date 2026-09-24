@@ -6,7 +6,10 @@ namespace LovePandas.Core
     // Зеркало JSON сервера (server/src/game.ts → state()). Поля — в camelCase, как в ответе,
     // потому что JsonUtility сопоставляет по имени. Перечисления приходят строками.
 
-    public enum Slot { Head, Face, Neck, Body, Legs, Hands, Tail, Back }
+    public enum Slot { Head, Face, Neck, Body, Legs, Hands, Tail, Back, Feet }
+
+    /// Вкладки инвентаря.
+    public enum Category { Weapon, Hat, Clothes, Boots }
 
     public enum Rarity { Common, Uncommon, Rare, Legendary, BossExclusive }
 
@@ -73,6 +76,20 @@ namespace LovePandas.Core
 
         public Slot Slot => Enum.TryParse(slot, out Slot s) ? s : Slot.Head;
         public Rarity Rarity => Enum.TryParse(rarity, out Rarity r) ? r : Rarity.Common;
+
+        public Category Category
+        {
+            get
+            {
+                switch (Slot)
+                {
+                    case Slot.Hands: return Category.Weapon;
+                    case Slot.Head: return Category.Hat;
+                    case Slot.Feet: return Category.Boots;
+                    default: return Category.Clothes;
+                }
+            }
+        }
     }
 
     [Serializable]

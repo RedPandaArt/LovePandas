@@ -47,10 +47,10 @@ namespace LovePandas.Editor
             EnsureMaterial("Assets/LovePandas/Resources/Materials/Base.mat", "LovePandas/Toon");
             EnsureMaterial("Assets/LovePandas/Resources/Materials/FX.mat", "LovePandas/FX");
 
-            // Фоны: полное качество, без сжатия в кашу на телефоне.
-            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/LovePandas/Resources/Backgrounds" }))
+            // Фоны и UI-текстуры: полное качество, без сжатия в кашу на телефоне.
+            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/LovePandas/Resources/Backgrounds", "Assets/LovePandas/Resources/UI" }))
             {
-                var ti = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+                if (!(AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid)) is TextureImporter ti)) continue;
                 if (ti.maxTextureSize == 2048 && ti.mipmapEnabled == false) continue;
                 ti.maxTextureSize = 2048;
                 ti.mipmapEnabled = false;

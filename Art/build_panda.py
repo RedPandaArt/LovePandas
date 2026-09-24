@@ -189,6 +189,7 @@ BONES = [
     ("Socket_Back", (0, 0.1, 0.46), (0, 0.2, 0.46), "Spine"),
     ("Socket_Hand_R", (-0.21, -0.1, 0.28), (-0.21, -0.1, 0.18), "Arm_R"),
     ("Socket_Tail", TAIL_PTS[4], TAIL_PTS[5], "Tail_3"),
+    ("Socket_Feet", (0, 0, 0), (0, 0, 0.1), "Root"),
 ]
 
 def build_armature():
@@ -285,8 +286,10 @@ def skin(parts, rig, name):
 # ---------- Предметы ----------
 # Каждый предмет строится в координатах персонажа, затем origin переносится в точку сокета.
 SOCKETS = {name: Vector(h) for name, h, t, p in BONES if name.startswith("Socket")}
+ITEM_SOCKET = {}  # id предмета → сокет; выгружается в Items/sockets.json для Unity
 
 def join_item(objs, name, socket):
+    ITEM_SOCKET[name] = socket
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
@@ -382,7 +385,70 @@ def item_wand_star():
         paint(o[-1], GLOW, glow=True)
     return join_item(o, "wand_star", "Socket_Hand_R")
 
-ITEMS = [item_hat_wanderer, item_hat_witch, item_scarf_teal, item_cape_cream, item_bow_pink, item_staff_lantern, item_wand_star]
+MUSTARD = (0.88, 0.64, 0.22)
+GOLD = (1.0, 0.78, 0.25)
+RUBY = (0.85, 0.12, 0.2)
+BAMBOO = (0.45, 0.68, 0.3)
+RED_CAPE = (0.72, 0.16, 0.14)
+BOOT_BROWN = (0.45, 0.28, 0.16)
+BOOT_PINK = (0.95, 0.6, 0.7)
+BOOT_YELLOW = (0.98, 0.8, 0.2)
+
+def item_hat_beanie():
+    o = [sphere("Dome", MUSTARD, (0, 0.0, 0.9), 0.25, (1.05, 1.0, 0.72), seg=32),
+         torus("Cuff", MUSTARD, (0, 0.0, 0.89), 0.25, 0.04, scale=(1.05, 1.0, 1)),
+         sphere("Pompom", CREAM, (0, 0.0, 1.1), 0.07)]
+    return join_item(o, "hat_beanie", "Socket_Head")
+
+def item_hat_crown():
+    o = [cylinder("Ring", GOLD, (0, 0, 0.99), 0.14, 0.07, verts=32)]
+    for k in range(6):
+        a = 2 * math.pi * k / 6
+        o.append(cone("Spike%d" % k, GOLD, (math.sin(a) * 0.13, math.cos(a) * 0.13, 1.06), 0.035, 0.004, 0.08, verts=12))
+    o.append(sphere("Gem", RUBY, (0, -0.145, 0.99), 0.025, (1, 0.6, 1), glow=True))
+    return join_item(o, "hat_crown", "Socket_Head")
+
+def item_sword_wood():
+    h = SOCKETS["Socket_Hand_R"]
+    o = [capsule("Grip", WOOD, (h.x, h.y - 0.02, h.z - 0.06), (h.x, h.y - 0.02, h.z + 0.04), 0.017),
+         cylinder("Guard", (0.6, 0.45, 0.3), (h.x, h.y - 0.02, h.z + 0.05), 0.012, 0.13, rot=(0, 90, 0)),
+         cube_item("Blade", (0.82, 0.68, 0.48), (h.x, h.y - 0.02, h.z + 0.24), (0.045, 0.015, 0.36)),
+         cone("Tip", (0.82, 0.68, 0.48), (h.x, h.y - 0.02, h.z + 0.445), 0.032, 0.001, 0.05, verts=4, rot=(0, 0, 45), scale=(1, 0.33, 1))]
+    return join_item(o, "sword_wood", "Socket_Hand_R")
+
+def cube_item(name, color, loc, size):
+    bpy.ops.mesh.primitive_cube_add(size=1)
+    return finish(bpy.context.object, name, color, loc, None, size, smooth=False)
+
+def item_bamboo_staff():
+    h = SOCKETS["Socket_Hand_R"]
+    o = [cylinder("Pole", BAMBOO, (h.x, h.y - 0.02, 0.39), 0.02, 0.78, verts=12)]
+    for k in range(5):
+        o.append(torus("Node%d" % k, (0.35, 0.55, 0.22), (h.x, h.y - 0.02, 0.1 + k * 0.16), 0.021, 0.006))
+    o.append(sphere("Leaf", (0.3, 0.6, 0.25), (h.x + 0.05, h.y - 0.02, 0.76), 0.05, (1.3, 0.2, 0.5), rot=(0, -30, 0)))
+    return join_item(o, "bamboo_staff", "Socket_Hand_R")
+
+def item_cape_red():
+    o = [torus("Collar", RED_CAPE, (0, -0.01, 0.51), 0.15, 0.035, scale=(1.05, 0.95, 1)),
+         jagged_cape("Cape", RED_CAPE, 0.17, 0.27, 0.5, 0.33, 8),
+         sphere("Clasp", GOLD, (0, -0.15, 0.5), 0.025)]
+    return join_item(o, "cape_red", "Socket_Neck")
+
+def boots(name, color, cuff):
+    o = []
+    for sx in (1, -1):
+        o.append(sphere("Boot%d" % sx, color, (0.09 * sx, -0.05, 0.04), 0.08, (1.05, 1.35, 0.72)))
+        o.append(cylinder("Shaft%d" % sx, color, (0.09 * sx, -0.01, 0.1), 0.078, 0.1, verts=20))
+        o.append(torus("Cuff%d" % sx, cuff, (0.09 * sx, -0.01, 0.15), 0.078, 0.02))
+    return join_item(o, name, "Socket_Feet")
+
+def item_boots_brown(): return boots("boots_brown", BOOT_BROWN, CREAM)
+def item_boots_pink(): return boots("boots_pink", BOOT_PINK, IVORY)
+def item_boots_yellow(): return boots("boots_yellow", BOOT_YELLOW, (0.2, 0.45, 0.6))
+
+ITEMS = [item_hat_wanderer, item_hat_witch, item_scarf_teal, item_cape_cream, item_bow_pink, item_staff_lantern, item_wand_star,
+         item_hat_beanie, item_hat_crown, item_sword_wood, item_bamboo_staff, item_cape_red,
+         item_boots_brown, item_boots_pink, item_boots_yellow]
 
 # ---------- Экспорт ----------
 def export_fbx(path, objs):
@@ -427,15 +493,16 @@ for girl, name, outfit in ((False, "panda_m", [item_hat_wanderer, item_scarf_tea
     if PREVIEW:
         # надеть наряд: предмет стоит origin-ом в точке своего сокета
         for w in [f() for f in outfit]:
-            sock = {"hat_wanderer": "Socket_Head", "hat_witch": "Socket_Head", "scarf_teal": "Socket_Neck",
-                    "cape_cream": "Socket_Neck", "bow_pink": "Socket_Neck", "staff_lantern": "Socket_Hand_R",
-                    "wand_star": "Socket_Hand_R"}[w.name]
-            w.location = SOCKETS[sock]
+            w.location = SOCKETS[ITEM_SOCKET[w.name]]
         preview(os.path.join(PREVIEW, name + ".png"), [])
 
 for make in ITEMS:
     reset()
     item = make()
     export_fbx(os.path.join(OUT, "Items", item.name + ".fbx"), [item])
+
+import json
+with open(os.path.join(OUT, "Items", "sockets.json"), "w", encoding="utf-8") as f:
+    json.dump({"entries": [{"item": k, "socket": v} for k, v in sorted(ITEM_SOCKET.items())]}, f, ensure_ascii=False, indent=1)
 
 print("LOVEPANDAS_BUILD_OK")
