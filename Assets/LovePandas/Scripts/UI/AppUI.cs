@@ -24,6 +24,8 @@ namespace LovePandas.UI
         VisualElement nav;
         InventoryPanel inventory;
         OrdersPanel orders;
+        VisitPanel visit;
+        InboxBubble inbox;
         Stage stage = Stage.Connecting;
         float toastUntil, nextPoll;
         bool busy, polling;
@@ -42,6 +44,9 @@ namespace LovePandas.UI
             inventory.Closed += () => nav.RemoveFromClassList("hidden");
             orders = new OrdersPanel(root, game, character, Run);
             orders.Closed += () => nav.RemoveFromClassList("hidden");
+            visit = new VisitPanel(root, game, character, Run, Toast);
+            visit.Closed += () => { nav.RemoveFromClassList("hidden"); home.RemoveFromClassList("visiting"); };
+            inbox = new InboxBubble(root, game, character, Run);
             overlay.BringToFront();
             toast.BringToFront();
 
@@ -76,6 +81,8 @@ namespace LovePandas.UI
                 Poll();
             inventory?.Tick();
             orders?.Tick();
+            visit?.Tick();
+            inbox?.Tick(stage == Stage.Home && !inventory.IsOpen && !orders.IsOpen && !visit.IsOpen);
         }
 
         async void Poll()
@@ -114,6 +121,8 @@ namespace LovePandas.UI
             }
             inventory?.Close();
             orders?.Close();
+            visit?.Close();
+            inbox?.Hide();
             home.AddToClassList("hidden");
             overlay.RemoveFromClassList("hidden");
 
@@ -213,10 +222,17 @@ namespace LovePandas.UI
             coinsChip.Add(coinsLabel);
             top.Add(coinsChip);
 
+            // плашка партнёра — кнопка «В гости»: посмотреть его панду и погладить/поцеловать/обнять
             var who = Row("chip");
-            partnerLabel = new Label();
+            who.AddToClassList("visit-chip");
+            var houseIcon = new VisualElement { pickingMode = PickingMode.Ignore };
+            houseIcon.AddToClassList("visit-chip-heart");
+            houseIcon.style.backgroundImage = Hearts.Texture;
+            who.Add(houseIcon);
+            partnerLabel = new Label { pickingMode = PickingMode.Ignore };
             partnerLabel.AddToClassList("player-name");
             who.Add(partnerLabel);
+            who.RegisterCallback<ClickEvent>(_ => OpenVisit());
             top.Add(who);
             home.Add(top);
 
@@ -248,8 +264,9 @@ namespace LovePandas.UI
         {
             var s = game.State;
             coinsLabel.text = s.me.coins.ToString();
-            partnerLabel.text = s.HasPartner ? $"{s.me.name} и {s.partner.name}" : s.me.name;
-            character.Apply(s.me, game.Item);
+            partnerLabel.text = s.HasPartner ? $"В гости к {s.partner.name}" : s.me.name;
+            // в гостях на сцене панда партнёра
+            character.Apply(visit != null && visit.IsOpen && s.HasPartner ? s.partner : s.me, game.Item);
             if (stage != Stage.Connecting && stage != Stage.Offline) Route();
             inventory?.Refresh();
             orders?.Refresh();
@@ -263,6 +280,17 @@ namespace LovePandas.UI
             inventory.Close();
             nav.AddToClassList("hidden");
             orders.Open();
+        }
+
+        void OpenVisit()
+        {
+            if (stage != Stage.Home || !game.State.HasPartner) return;
+            inventory.Close();
+            orders.Close();
+            inbox.Hide();
+            nav.AddToClassList("hidden");
+            home.AddToClassList("visiting"); // плашки сверху прячем: в гостях своя шапка
+            visit.Open();
         }
 
         void OpenInventory()
@@ -299,6 +327,7 @@ namespace LovePandas.UI
             {
                 case "board": OpenOrders(); break;
                 case "board-new": OpenOrders(); orders.OpenModal(); break;
+                case "visit": OpenVisit(); break;
                 case "inventory": OpenInventory(); break;
                 default: inventory.Close(); orders.Close(); break;
             }

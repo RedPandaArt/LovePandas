@@ -90,6 +90,14 @@ namespace LovePandas.Core
         public Task<string> Buy(ItemDef item) => Call("/shop/buy", new ItemBody { itemId = item.id });
         public Task<string> ToggleEquip(ItemDef item) => Call("/wardrobe/toggle", new ItemBody { itemId = item.id });
 
+        // ---------- В гостях ----------
+
+        [Serializable] class KindBody { public string kind; }
+
+        /// kind: "pet" — погладить, "kiss" — поцеловать, "hug" — обнять панду партнёра.
+        public Task<string> Interact(string kind) => Call("/interact", new KindBody { kind = kind });
+        public Task<string> AckInbox() => Call("/inbox/ack");
+
         // ---------- Внутреннее ----------
 
         async Task<string> Call(string path, object body = null) => Apply(await api.Post(path, body));

@@ -92,10 +92,21 @@ namespace LovePandas.Core
         }
     }
 
+    /// Нежность от партнёра, которую ещё не открыли: pet — погладил, kiss — поцеловал, hug — обнял.
+    [Serializable]
+    public class InboxEntry
+    {
+        public string id;
+        public string kind;
+        public string fromName;
+        public long createdAt;
+    }
+
     [Serializable]
     public class GameState
     {
         public int version;
+        public List<InboxEntry> inbox = new List<InboxEntry>();
         public Player me;
         public Player partner;
         public CoupleInfo couple;

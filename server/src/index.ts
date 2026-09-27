@@ -46,6 +46,8 @@ export function createApp(game: Game) {
         case "/quests": game.createQuest(me, body.text, body.reward); break;
         case "/shop/buy": game.buy(me, body.itemId); break;
         case "/wardrobe/toggle": game.toggleEquip(me, body.itemId); break;
+        case "/interact": game.interact(me, body.kind); break;
+        case "/inbox/ack": game.ackInbox(me); break;
         default: throw new GameError("Не найдено", 404);
       }
       send(res, 200, { bonus, state: game.state(me) });

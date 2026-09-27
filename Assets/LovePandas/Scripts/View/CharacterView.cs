@@ -98,6 +98,26 @@ namespace LovePandas.View
 
         public void PlayJoy() => joyUntil = Time.time + 1.4f;
 
+        // ---------- В гостях: нежности ----------
+
+        float petUntil, kissUntil, hugUntil;
+
+        /// Погладили по голове: жмурится, покачивает головой, уши прижаты.
+        public void PlayPet() { petUntil = Time.time + 1.3f; Hearts.Burst(HeadPoint + Vector3.up * 0.3f, 4); }
+        /// Поцеловали: тянется мордочкой вперёд, сердечки от лица.
+        public void PlayKiss() { kissUntil = Time.time + 1.1f; Hearts.Burst(FacePoint, 8); }
+        /// Обняли: сжимается, лапки к груди, сердечки.
+        public void PlayHug() { hugUntil = Time.time + 1.4f; Hearts.Burst(ChestPoint, 12); }
+
+        // Точки для касаний (мир) и их радиусы — UI проецирует их на экран.
+        public Vector3 HeadPoint => Bone("Head") != null && Bone("Socket_Head") != null
+            ? Vector3.Lerp(Bone("Head").position, Bone("Socket_Head").position, 0.55f) : transform.position + Vector3.up * 1.6f;
+        public Vector3 FacePoint => Bone("Socket_Face") != null ? Bone("Socket_Face").position : HeadPoint;
+        public Vector3 ChestPoint => Bone("Spine") != null ? Bone("Spine").position + Vector3.up * 0.1f * Scale : transform.position + Vector3.up;
+        public float HeadRadius => 0.3f * Scale;
+        public float FaceRadius => 0.14f * Scale;
+        public float ChestRadius => 0.2f * Scale;
+
         // ---------- Модель ----------
 
         void SetCharacter(string id)
@@ -206,25 +226,31 @@ namespace LovePandas.View
             float joy = joyUntil > t ? Mathf.Clamp01((joyUntil - t) / 1.4f) : 0f;
             float joyWave = joy > 0 ? Mathf.Sin((1.4f - (joyUntil - t)) * 9f) : 0f;
 
-            // дыхание и прыжок радости
-            if (hips != null) hips.localScale = new Vector3(1, 1 + Mathf.Sin(t * 2.2f) * 0.018f, 1);
+            float pet = petUntil > t ? Mathf.Clamp01((petUntil - t) / 1.3f) : 0f;
+            float kiss = kissUntil > t ? Mathf.Sin((1f - (kissUntil - t) / 1.1f) * Mathf.PI) : 0f;
+            float hug = hugUntil > t ? Mathf.Sin((1f - (hugUntil - t) / 1.4f) * Mathf.PI) : 0f;
+
+            // дыхание, прыжок радости, «сжатие» от обнимашки
+            if (hips != null) hips.localScale = new Vector3(1 + hug * 0.08f, 1 + Mathf.Sin(t * 2.2f) * 0.018f - hug * 0.07f, 1 + hug * 0.05f);
             float hop = joy > 0 ? Mathf.Abs(joyWave) * 0.35f * joy : 0f;
             model.localPosition = new Vector3(0, hop, 0);
             yaw = Mathf.LerpAngle(yaw, UserYaw, 1 - Mathf.Exp(-Time.deltaTime * 12f));
             model.localRotation = Quaternion.Euler(0, Yaw + yaw, 0);
 
-            spine?.Pose(Mathf.Sin(t * 2.2f) * 1.5f, Mathf.Sin(t * 0.6f) * 3f, 0);
-            head?.Pose(Mathf.Sin(t * 1.1f) * 2.5f, Mathf.Sin(t * 0.45f) * 6f, Mathf.Sin(t * 0.8f) * 4f + joy * 8f);
+            spine?.Pose(Mathf.Sin(t * 2.2f) * 1.5f - kiss * 9f, Mathf.Sin(t * 0.6f) * 3f, 0);
+            head?.Pose(Mathf.Sin(t * 1.1f) * 2.5f - kiss * 8f, Mathf.Sin(t * 0.45f) * 6f,
+                       Mathf.Sin(t * 0.8f) * 4f + joy * 8f + Mathf.Sin(t * 9f) * 10f * pet + kiss * 10f);
 
             // уши иногда подёргиваются
             if (t > nextTwitch) { twitchSide = Random.value > 0.5f ? 1 : -1; twitchUntil = t + 0.25f; nextTwitch = t + Random.Range(2.5f, 6f); }
             float twitch = twitchUntil > t ? Mathf.Sin((twitchUntil - t) / 0.25f * Mathf.PI) * 18f : 0f;
-            earL?.Pose(0, 0, Mathf.Sin(t * 1.3f) * 2f + (twitchSide > 0 ? twitch : 0));
-            earR?.Pose(0, 0, -Mathf.Sin(t * 1.3f) * 2f - (twitchSide < 0 ? twitch : 0));
+            // когда гладят — уши прижимаются
+            earL?.Pose(0, 0, Mathf.Sin(t * 1.3f) * 2f + (twitchSide > 0 ? twitch : 0) - pet * 28f);
+            earR?.Pose(0, 0, -Mathf.Sin(t * 1.3f) * 2f - (twitchSide < 0 ? twitch : 0) + pet * 28f);
 
-            // лапки: лёгкое покачивание, в радости — вверх
-            armL?.Pose(Mathf.Sin(t * 1.6f) * 4f, 0, -joy * 70f);
-            armR?.Pose(-Mathf.Sin(t * 1.6f) * 4f, 0, joy * 70f);
+            // лапки: лёгкое покачивание, в радости — вверх, в обнимашке — к груди
+            armL?.Pose(Mathf.Sin(t * 1.6f) * 4f, 0, -joy * 70f + hug * 45f);
+            armR?.Pose(-Mathf.Sin(t * 1.6f) * 4f, 0, joy * 70f - hug * 45f);
 
             // хвост волной по цепочке
             for (int i = 0; i < tail.Length; i++)

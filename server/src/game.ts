@@ -227,6 +227,35 @@ export class Game {
     });
   }
 
+  // ---------- В гостях: нежности партнёру ----------
+
+  /// Погладить (pet), поцеловать (kiss) или обнять (hug) панду партнёра — попадает ему во «входящие».
+  /// Один и тот же жест чаще раза в 2 секунды не записывается, непрочитанных держим не больше 50.
+  interact(me: PlayerRow, kind: unknown, now = Date.now()) {
+    if (kind !== "pet" && kind !== "kiss" && kind !== "hug") throw new GameError("Не знаю такого жеста");
+    const couple = this.requirePartner(me);
+    const partner = this.db.prepare("SELECT id FROM players WHERE couple_id = ? AND id != ?").get(couple, me.id) as { id: string };
+    tx(this.db, () => {
+      const recent = this.db.prepare(
+        "SELECT 1 FROM interactions WHERE from_id = ? AND kind = ? AND created_at > ?").get(me.id, kind, now - 2000);
+      if (recent) return;
+      const unseen = (this.db.prepare("SELECT COUNT(*) AS n FROM interactions WHERE to_id = ? AND seen = 0")
+        .get(partner.id) as { n: number }).n;
+      if (unseen >= 50) return;
+      this.db.prepare(`INSERT INTO interactions (id, couple_id, from_id, to_id, kind, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?)`).run(randomUUID(), couple, me.id, partner.id, kind, now);
+      this.bump(couple);
+    });
+  }
+
+  /// Получатель открыл бабл — всё прочитано.
+  ackInbox(me: PlayerRow) {
+    tx(this.db, () => {
+      const res = this.db.prepare("UPDATE interactions SET seen = 1 WHERE to_id = ? AND seen = 0").run(me.id);
+      if (res.changes > 0) this.bump(me.couple_id);
+    });
+  }
+
   // ---------- Состояние для клиента ----------
 
   /// version — счётчик изменений пары: клиент опрашивает /state?since=N и получает 304, если нового нет.
@@ -250,8 +279,14 @@ export class Game {
           .all(couple.id) as unknown as QuestRow[]
       : [];
 
+    const inbox = this.db.prepare(`SELECT i.id, i.kind, i.created_at, p.name AS from_name FROM interactions i
+                                   JOIN players p ON p.id = i.from_id
+                                   WHERE i.to_id = ? AND i.seen = 0 ORDER BY i.created_at`).all(fresh.id) as
+      { id: string; kind: string; created_at: number; from_name: string }[];
+
     return {
       version: couple?.version ?? 0,
+      inbox: inbox.map((i) => ({ id: i.id, kind: i.kind, fromName: i.from_name, createdAt: i.created_at })),
       me: this.publicPlayer(fresh, true),
       partner: partner ? this.publicPlayer(partner, false) : null,
       couple: couple ? { inviteCode: couple.invite_code } : null,

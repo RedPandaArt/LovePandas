@@ -114,6 +114,26 @@ test("ежедневный бонус раз в день", () => {
   assert.equal(coins(game, A()), START_COINS + 2 * DAILY_BONUS);
 });
 
+test("в гостях: нежности попадают партнёру во входящие, спам режется", () => {
+  const { game, A, B } = setup();
+  const t0 = Date.UTC(2026, 8, 27, 10);
+  game.interact(A(), "pet", t0);
+  game.interact(A(), "pet", t0 + 500);    // повтор в пределах 2 с — не пишется
+  game.interact(A(), "kiss", t0 + 600);
+  game.interact(A(), "pet", t0 + 3000);
+  assert.throws(() => game.interact(A(), "bite", t0), /жеста/);
+
+  const inbox = (game.state(B()) as { inbox: { kind: string; fromName: string }[] }).inbox;
+  assert.deepEqual(inbox.map((i) => i.kind), ["pet", "kiss", "pet"]);
+  assert.equal(inbox[0].fromName, "Панда");
+  assert.equal((game.state(A()) as { inbox: unknown[] }).inbox.length, 0); // себе не пишется
+
+  const v = game.version(B());
+  game.ackInbox(B());
+  assert.equal((game.state(B()) as { inbox: unknown[] }).inbox.length, 0);
+  assert.ok(game.version(B()) > v); // отправитель увидит, что прочитано
+});
+
 test("версия пары растёт при изменениях", () => {
   const { game, A, B } = setup();
   const v = game.version(A());

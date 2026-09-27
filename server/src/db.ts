@@ -46,6 +46,18 @@ export function openDb(path: string): DatabaseSync {
       PRIMARY KEY (player_id, item_id)
     );
 
+    -- «В гостях»: погладил / поцеловал / обнял. seen — получатель открыл бабл с сердечком.
+    CREATE TABLE IF NOT EXISTS interactions (
+      id         TEXT PRIMARY KEY,
+      couple_id  TEXT NOT NULL REFERENCES couples(id),
+      from_id    TEXT NOT NULL REFERENCES players(id),
+      to_id      TEXT NOT NULL REFERENCES players(id),
+      kind       TEXT NOT NULL,
+      seen       INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS interactions_inbox ON interactions(to_id, seen);
+
     CREATE TABLE IF NOT EXISTS equipped (
       player_id TEXT NOT NULL REFERENCES players(id),
       slot      TEXT NOT NULL,
