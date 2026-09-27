@@ -15,6 +15,7 @@ Shader "LovePandas/Toon"
         _OutlineColor ("Outline Color", Color) = (0.18, 0.1, 0.08, 1)
         _OutlineWidth ("Outline Width", Range(0,0.05)) = 0.012
         _Desaturate ("Desaturate", Range(0,1)) = 0
+        _Cutoff ("Alpha cutoff (рваные края бумаги)", Range(0,1)) = 0
     }
 
     SubShader
@@ -28,7 +29,7 @@ Shader "LovePandas/Toon"
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor, _ShadeColor, _RimColor, _OutlineColor;
-            half _ShadeStep, _ShadeSoftness, _RimPower, _RimStrength, _OutlineWidth, _Desaturate;
+            half _ShadeStep, _ShadeSoftness, _RimPower, _RimStrength, _OutlineWidth, _Desaturate, _Cutoff;
         CBUFFER_END
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         ENDHLSL
@@ -68,6 +69,7 @@ Shader "LovePandas/Toon"
                 half lit = smoothstep(_ShadeStep - _ShadeSoftness, _ShadeStep + _ShadeSoftness, ndl);
 
                 half4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv) * _BaseColor * half4(i.color.rgb, 1);
+                clip(albedo.a - _Cutoff);
                 half3 shade = albedo.rgb * _ShadeColor.rgb;
                 half3 col = lerp(shade, albedo.rgb * light.color, lit);
                 col += albedo.rgb * SampleSH(n) * 0.35;

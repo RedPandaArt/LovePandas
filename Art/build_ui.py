@@ -193,6 +193,107 @@ env_dir = os.path.join(os.path.dirname(OUT.rstrip("/\\")), "Env")
 os.makedirs(env_dir, exist_ok=True)
 export(os.path.join(env_dir, "platform.fbx"), [plat, decor])
 
+# ---------- Доска заказов ----------
+# Большой щит на весь экран: доски, толстая рамка из брёвен, табличка-заголовок, две колонки листков
+# («Для тебя» — задания партнёра, «Твои заказы» — свои), внизу табличка «+ Новый заказ».
+# Пустышки: Title, Header_L/R, Note_L0..3 / Note_R0..3 (центр листка), New (табличка), Close.
+bpy.ops.wm.read_factory_settings(use_empty=True)
+QW, QH, QD = 1.44, 2.96, 0.08
+QTOP, qfront = QH / 2, -QD / 2
+q = []
+q.append(box("QBoard", WOOD, (0, 0, 0), (QW, QD, QH), bevel=0.035))
+for x in (-QW / 4, 0, QW / 4):
+    q.append(box("QSeam", WOOD_DARK, (x, qfront - 0.002, 0), (0.014, 0.01, QH - 0.1)))
+q.append(cyl("QLogTop", BARK, (0, 0, QTOP + 0.05), 0.07, QW + 0.34, rot=(0, 90, 0), verts=12))
+q.append(cyl("QLogBottom", BARK, (0, -0.01, -QTOP - 0.04), 0.065, QW + 0.24, rot=(0, 90, 0), verts=12))
+for x in (-QW / 2 - 0.03, QW / 2 + 0.03):
+    q.append(cyl("QLogSide", BARK, (x, -0.01, 0), 0.06, QH + 0.04, verts=12))
+for x in (-QW / 2 + 0.08, QW / 2 - 0.08):
+    q.append(cyl("QRope", ROPE, (x, 0, QTOP + 1.7), 0.02, 3.2, verts=8))
+    q.append(torus("QKnot", ROPE, (x, 0, QTOP + 0.05), 0.085, 0.024, rot=(0, 90, 0)))
+# табличка-заголовок и таблички колонок
+q.append(box("TitlePlaque", WOOD_DARK, (0, qfront - 0.03, QTOP - 0.2), (0.9, 0.05, 0.24), bevel=0.03))
+for x in (-QW / 4, QW / 4):
+    q.append(box("HeaderPlaque", DISC, (x, qfront - 0.02, QTOP - 0.47), (0.6, 0.035, 0.13), bevel=0.02))
+# вертикальная перегородка между колонками — тонкое брёвнышко
+q.append(cyl("QDivider", BARK, (0, qfront - 0.02, -0.18), 0.022, QH - 0.9, verts=10))
+# табличка «Новый заказ» внизу
+q.append(box("NewPlaque", DISC, (0, qfront - 0.03, -QTOP + 0.2), (0.62, 0.05, 0.2), bevel=0.03))
+q.append(box("PlusH", WOOD_DARK, (-0.21, qfront - 0.06, -QTOP + 0.2), (0.1, 0.02, 0.026)))
+q.append(box("PlusV", WOOD_DARK, (-0.21, qfront - 0.06, -QTOP + 0.2), (0.026, 0.02, 0.1)))
+for x, z in ((-QW / 2 + 0.1, QTOP - 0.1), (QW / 2 - 0.1, QTOP - 0.1), (-QW / 2 + 0.1, -QTOP + 0.1), (QW / 2 - 0.1, -QTOP + 0.1)):
+    q.append(sph("QNail", NAIL, (x, qfront - 0.01, z), 0.024, (1, 0.5, 1)))
+for (x, z, r) in ((-QW / 2, QTOP - 0.05, 0.14), (QW / 2 - 0.05, -QTOP + 0.1, 0.12), (QW / 2, 0.6, 0.08)):
+    q.append(sph("QMoss", MOSS, (x, qfront - 0.01, z), r, (1.3, 0.5, 0.8)))
+for k, (x, rz) in enumerate(((-0.62, 30), (-0.45, -20), (0.5, 25), (0.68, -35))):
+    q.append(sph("QLeaf%d" % k, LEAF, (x, -0.05, QTOP + 0.12), 0.1, (1.6, 0.25, 0.6), rot=(0, rz, 0)))
+
+qe = [empty("Title", (0, qfront - 0.08, QTOP - 0.2)), empty("Close", (QW / 2 - 0.02, qfront - 0.1, QTOP + 0.02)),
+      empty("New", (0.04, qfront - 0.08, -QTOP + 0.2))]
+for side, x in (("L", -QW / 4), ("R", QW / 4)):
+    qe.append(empty("Header_" + side, (x, qfront - 0.06, QTOP - 0.47)))
+    for k in range(4):
+        qe.append(empty("Note_%s%d" % (side, k), (x, qfront - 0.05, QTOP - 0.83 - k * 0.5)))
+qboard = join(q, "QuestBoard")
+for e in qe: e.parent = qboard
+export(os.path.join(OUT, "quest_board.fbx"), [qboard] + qe)
+
+# ---------- Листок-заказ ----------
+# Пергамент 0.62×0.46, чуть изогнут (края отходят от доски), с UV под текстуру; гвоздик с красной шляпкой сверху.
+bpy.ops.wm.read_factory_settings(use_empty=True)
+PW, PH = 0.62, 0.46
+bm = bmesh.new()
+nx, nz = 12, 9
+grid = []
+for j in range(nz + 1):
+    row = []
+    for i in range(nx + 1):
+        u, v = i / nx, j / nz
+        x, z = (u - 0.5) * PW, (v - 0.5) * PH
+        # изгиб: нижние углы и край отходят от доски (к камере = −Y)
+        y = -(0.035 * (abs(u - 0.5) * 2) ** 2 + 0.025 * (1 - v) ** 2)
+        row.append(bm.verts.new((x, y, z)))
+    grid.append(row)
+for j in range(nz):
+    for i in range(nx):
+        bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+me = bpy.data.meshes.new("Paper")
+bm.to_mesh(me)
+bm.free()
+paper = bpy.data.objects.new("Paper", me)
+bpy.context.collection.objects.link(paper)
+uvl = me.uv_layers.new(name="UV")
+for loop in me.loops:
+    co = me.vertices[loop.vertex_index].co
+    uvl.data[loop.index].uv = (co.x / PW + 0.5, co.z / PH + 0.5)
+# нормали к камере (−Y): иначе лицевая сторона смотрит в доску
+if me.polygons[0].normal.y > 0:
+    for p in me.polygons: p.flip()
+for p in me.polygons: p.use_smooth = True
+paint(paper, (1, 1, 1))
+pin = join([sph("PinHead", (0.85, 0.18, 0.16), (0, -0.05, PH / 2 - 0.05), 0.03),
+            cyl("PinStem", NAIL, (0, -0.02, PH / 2 - 0.05), 0.006, 0.06, rot=(90, 0, 0), verts=8)], "Pin")
+export(os.path.join(OUT, "paper.fbx"), [paper, pin])
+
+# ---------- Дощечка-модалка «Новый заказ» ----------
+# Пустышки: Title (надпись), Field (поле текста), Price (цена), Submit (кнопка), Close.
+bpy.ops.wm.read_factory_settings(use_empty=True)
+MW, MH = 1.24, 0.96
+m = [box("MBoard", WOOD, (0, 0, 0), (MW, 0.07, MH), bevel=0.04)]
+for x in (-MW / 6, MW / 6):
+    m.append(box("MSeam", WOOD_DARK, (x, -0.037, 0), (0.012, 0.01, MH - 0.08)))
+m.append(cyl("MLogTop", BARK, (0, 0, MH / 2 + 0.04), 0.05, MW + 0.2, rot=(0, 90, 0), verts=12))
+for x in (-MW / 2 + 0.06, MW / 2 - 0.06):
+    m.append(cyl("MRope", ROPE, (x, 0, MH / 2 + 1.6), 0.016, 3.1, verts=8))
+m.append(sph("MMoss", MOSS, (MW / 2 - 0.04, -0.04, -MH / 2 + 0.06), 0.09, (1.3, 0.5, 0.8)))
+mb = join(m, "ModalBoard")
+me_ = [empty("Title", (0, -0.1, MH / 2 - 0.13)), empty("Field", (0, -0.1, 0.02)),
+       empty("Price", (-0.3, -0.1, -MH / 2 + 0.17)), empty("Submit", (0.25, -0.1, -MH / 2 + 0.17)),
+       empty("Close", (MW / 2 - 0.02, -0.1, MH / 2 + 0.02))]
+for e in me_: e.parent = mb
+export(os.path.join(OUT, "modal_board.fbx"), [mb] + me_)
+
 # ---------- Кольцо подсветки (цвет задаёт Unity) ----------
 bpy.ops.wm.read_factory_settings(use_empty=True)
 ring = torus("Ring", (1, 1, 1), (0, 0, 0), 0.2, 0.018, rot=(90, 0, 0), glow=True)

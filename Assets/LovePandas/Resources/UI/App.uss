@@ -218,6 +218,66 @@
 .inv-buy-btn:disabled { background-color: rgb(150, 130, 120); border-color: rgb(110, 95, 85); }
 .inv-open .toast { left: 58%; right: 16px; top: 150px; font-size: 28px; }
 
+/* ---------- Доска заказов (OrdersPanel поверх QuestBoardView) ---------- */
+.orders-layer { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.orders-modal { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(20, 12, 6, 0.35); }
+/* у всех привязанных к 3D элементов позицию задаёт код, центр — через translate */
+.orders-title, .orders-header, .orders-empty, .orders-new, .note, .modal-field, .modal-price, .modal-submit {
+    position: absolute;
+    translate: -50% -50%;
+}
+.orders-title {
+    font-size: 46px;
+    -unity-font-style: bold;
+    color: rgb(255, 238, 205);
+    text-shadow: 0 3px 3px rgba(40, 20, 8, 0.9);
+}
+.orders-header { font-size: 30px; -unity-font-style: bold; color: rgb(90, 52, 28); }
+.orders-empty {
+    width: 40%;
+    font-size: 26px;
+    color: rgb(255, 238, 205);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    text-shadow: 0 2px 3px rgba(40, 20, 8, 0.9);
+}
+.orders-new {
+    width: 380px; height: 96px;
+    padding-left: 56px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(90, 52, 28);
+}
+/* отступы листка задаёт код от ширины листка: проценты в UI Toolkit считаются от родителя (всего экрана) */
+.note { justify-content: space-between; }
+/* листок фиксированной высоты: сжимается только текст, нижний ряд с кнопками — никогда */
+.note-text { white-space: normal; color: rgb(60, 36, 22); -unity-font-style: bold; flex-grow: 1; flex-shrink: 1; overflow: hidden; }
+.note-status, .note-bottom, .note-btn, .note-actions { flex-shrink: 0; }
+.note-bottom { flex-direction: row; justify-content: space-between; align-items: center; }
+.note-reward { flex-direction: row; align-items: center; color: rgb(170, 100, 20); -unity-font-style: bold; }
+/* размеры шрифтов и монетки на листке задаёт код от ширины листка (USS не знает em) */
+.note-reward .coin { margin-right: 6px; border-width: 3px; }
+.note-status { color: rgb(130, 90, 60); }
+.note-actions { flex-direction: row; justify-content: flex-end; }
+.note-btn {
+    margin: 0 0 0 10px;
+    padding: 6px 20px;
+    min-height: 48px;
+    border-radius: 18px;
+    border-width: 0;
+    background-color: rgb(232, 110, 72);
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+.note-btn.secondary { background-color: rgb(120, 78, 45); color: rgb(255, 240, 220); }
+.modal-field { height: 180px; font-size: 32px; }
+.modal-field > .unity-base-text-field__input { background-color: rgba(255, 246, 228, 0.95); -unity-text-align: upper-left; white-space: normal; }
+.modal-price { width: 240px; font-size: 32px; }
+.modal-price > .unity-base-text-field__input { background-color: rgba(255, 246, 228, 0.95); }
+.modal-submit { width: 280px; height: 92px; margin: 0; font-size: 34px; border-radius: 32px; }
+
 /* Метка dev-сборки (LP_DEV) */
 .dev-badge {
     position: absolute;

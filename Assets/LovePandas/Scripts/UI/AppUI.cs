@@ -13,18 +13,17 @@ namespace LovePandas.UI
     /// Собирается кодом, стили — Resources/UI/App.uss.
     public class AppUI : MonoBehaviour
     {
-        enum Screen { None, Board }
         enum Stage { Connecting, Offline, Profile, Pair, Home }
 
         const float PollSeconds = 4f;
 
         GameService game;
         CharacterView character;
-        VisualElement root, home, overlay, sheetHost;
+        VisualElement root, home, overlay;
         Label coinsLabel, partnerLabel, toast;
         VisualElement nav;
         InventoryPanel inventory;
-        Screen open = Screen.None;
+        OrdersPanel orders;
         Stage stage = Stage.Connecting;
         float toastUntil, nextPoll;
         bool busy, polling;
@@ -41,6 +40,8 @@ namespace LovePandas.UI
             BuildHome();
             inventory = new InventoryPanel(root, game, character, Run, Toast);
             inventory.Closed += () => nav.RemoveFromClassList("hidden");
+            orders = new OrdersPanel(root, game, character, Run);
+            orders.Closed += () => nav.RemoveFromClassList("hidden");
             overlay.BringToFront();
             toast.BringToFront();
 
@@ -74,6 +75,7 @@ namespace LovePandas.UI
             if (Time.time >= nextPoll && !polling && !busy && (stage == Stage.Home || stage == Stage.Pair))
                 Poll();
             inventory?.Tick();
+            orders?.Tick();
         }
 
         async void Poll()
@@ -110,8 +112,8 @@ namespace LovePandas.UI
                 home.RemoveFromClassList("hidden");
                 return;
             }
-            CloseSheet();
             inventory?.Close();
+            orders?.Close();
             home.AddToClassList("hidden");
             overlay.RemoveFromClassList("hidden");
 
@@ -220,14 +222,9 @@ namespace LovePandas.UI
 
             nav = Row("nav");
             nav.Add(Button("Инвентарь", "nav-btn", OpenInventory));
-            nav.Add(Button("Заказы", "nav-btn", () => OpenSheet(Screen.Board)));
+            nav.Add(Button("Заказы", "nav-btn", OpenOrders));
             home.Add(nav);
 
-            sheetHost = new VisualElement();
-            sheetHost.AddToClassList("sheet-backdrop");
-            sheetHost.AddToClassList("hidden");
-            sheetHost.RegisterCallback<PointerDownEvent>(e => { if (e.target == sheetHost) CloseSheet(); });
-            root.Add(sheetHost);
 
             overlay = new VisualElement();
             overlay.AddToClassList("sheet-backdrop");
@@ -254,157 +251,24 @@ namespace LovePandas.UI
             partnerLabel.text = s.HasPartner ? $"{s.me.name} и {s.partner.name}" : s.me.name;
             character.Apply(s.me, game.Item);
             if (stage != Stage.Connecting && stage != Stage.Offline) Route();
-            if (open != Screen.None) RenderSheet();
             inventory?.Refresh();
+            orders?.Refresh();
         }
 
-        // ---------- Шторки ----------
+        // ---------- Экраны поверх главного ----------
 
-        void OpenSheet(Screen s)
+        void OpenOrders()
         {
+            if (stage != Stage.Home) return;
             inventory.Close();
-            open = s;
-            sheetHost.RemoveFromClassList("hidden");
-            // Камера рисует только полосу над шторкой (шторка — 62% высоты), панда остаётся видна.
-            if (Camera.main != null) Camera.main.rect = new Rect(0, 0.56f, 1, 0.44f);
-            RenderSheet();
-        }
-
-        void CloseSheet()
-        {
-            open = Screen.None;
-            if (Camera.main != null) Camera.main.rect = new Rect(0, 0, 1, 1);
-            sheetHost.AddToClassList("hidden");
-            sheetHost.Clear();
-        }
-
-        void RenderSheet()
-        {
-            // Сохраняем прокрутку и черновик формы, чтобы перерисовка после действия или опроса не сбивала их.
-            var oldScroll = sheetHost.Q<ScrollView>();
-            var offset = oldScroll?.scrollOffset ?? Vector2.zero;
-            var draftText = sheetHost.Q<TextField>("quest-text")?.value;
-            var draftPrice = sheetHost.Q<TextField>("quest-price")?.value;
-            var focused = root.focusController?.focusedElement as VisualElement;
-            var focusedName = focused?.name ?? focused?.parent?.name;
-
-            sheetHost.Clear();
-            var sheet = new VisualElement();
-            sheet.AddToClassList("sheet");
-            sheetHost.Add(sheet);
-
-            var header = Row("sheet-header");
-            var title = new Label("Заказы");
-            title.AddToClassList("sheet-title");
-            header.Add(title);
-            header.Add(CloseButton(CloseSheet));
-            sheet.Add(header);
-
-            var scroll = new ScrollView(ScrollViewMode.Vertical) { style = { flexGrow = 1 } };
-            sheet.Add(scroll);
-
-            switch (open)
-            {
-                case Screen.Board: RenderBoard(scroll, draftText, draftPrice); break;
-            }
-
-            scroll.schedule.Execute(() =>
-            {
-                scroll.scrollOffset = offset;
-                if (!string.IsNullOrEmpty(focusedName)) sheetHost.Q<TextField>(focusedName)?.Focus();
-            });
-        }
-
-        void RenderBoard(VisualElement parent, string draftText, string draftPrice)
-        {
-            var form = new VisualElement();
-            form.AddToClassList("form");
-            var text = new TextField { name = "quest-text", maxLength = Economy.MaxQuestTextLength, multiline = true };
-            text.textEdition.placeholder = $"Что {game.Partner.name} сделать для тебя?";
-            text.AddToClassList("input");
-            text.value = draftText ?? "";
-            form.Add(text);
-
-            var row = Row("form-row");
-            var price = new TextField { name = "quest-price", maxLength = 4 };
-            price.textEdition.placeholder = "Цена";
-            price.AddToClassList("input");
-            price.AddToClassList("input-price");
-            price.value = draftPrice ?? "";
-            row.Add(price);
-            row.Add(new VisualElement { style = { flexGrow = 1 } });
-            row.Add(Button("Разместить", "action-btn", () =>
-            {
-                int.TryParse(price.value, out var reward);
-                Run(() => game.CreateQuest(text.value, reward), "Задание на доске", () =>
-                {
-                    var t = sheetHost.Q<TextField>("quest-text");
-                    var p = sheetHost.Q<TextField>("quest-price");
-                    if (t != null) t.value = "";
-                    if (p != null) p.value = "";
-                });
-            }));
-            form.Add(row);
-            parent.Add(form);
-
-            Section(parent, $"Задания от {game.Partner.name}");
-            var partnerQuests = game.PartnerQuests.ToList();
-            if (partnerQuests.Count == 0) Empty(parent, "Пока пусто — партнёр ещё ничего не поставил");
-            foreach (var q in partnerQuests) parent.Add(QuestCard(q, mine: false));
-
-            Section(parent, "Мои задания");
-            var myQuests = game.MyQuests.ToList();
-            if (myQuests.Count == 0) Empty(parent, "Поставь партнёру первое задание");
-            foreach (var q in myQuests) parent.Add(QuestCard(q, mine: true));
-        }
-
-        VisualElement QuestCard(Quest q, bool mine)
-        {
-            var card = new VisualElement();
-            card.AddToClassList("quest");
-            var text = new Label(q.text);
-            text.AddToClassList("quest-text");
-            card.Add(text);
-
-            var meta = Row("quest-meta");
-            meta.Add(Price(q.reward, "quest-reward"));
-
-            var status = new Label(StatusText(q, mine));
-            status.AddToClassList("quest-status");
-            meta.Add(status);
-
-            var actions = Row("quest-actions");
-            if (mine && q.status == QuestStatus.Created)
-                actions.Add(Button("Отменить", "action-btn secondary", () => Run(() => game.CancelQuest(q), "Монеты вернулись")));
-            if (mine && q.status == QuestStatus.Done)
-            {
-                actions.Add(Button("Не то", "action-btn secondary", () => Run(() => game.Reject(q), "Вернули в работу")));
-                actions.Add(Button("Принять", "action-btn", () => Run(() => game.Confirm(q), "Спасибо!", character.PlayJoy)));
-            }
-            if (!mine && q.status == QuestStatus.Created)
-                actions.Add(Button("Взять", "action-btn", () => Run(() => game.TakeQuest(q), "Задание взято")));
-            if (!mine && q.status == QuestStatus.Taken)
-                actions.Add(Button("Готово", "action-btn", () => Run(() => game.MarkDone(q), "Ждём подтверждения")));
-            meta.Add(actions);
-            card.Add(meta);
-            return card;
-        }
-
-        static string StatusText(Quest q, bool mine)
-        {
-            switch (q.status)
-            {
-                case QuestStatus.Created: return mine ? "ждёт исполнителя" : "свободно";
-                case QuestStatus.Taken: return mine ? "в работе" : "ты делаешь";
-                case QuestStatus.Done: return mine ? "проверь" : "на проверке";
-                default: return "";
-            }
+            nav.AddToClassList("hidden");
+            orders.Open();
         }
 
         void OpenInventory()
         {
             if (stage != Stage.Home) return;
-            CloseSheet();
+            orders.Close();
             nav.AddToClassList("hidden");
             inventory.Open();
         }
@@ -433,9 +297,10 @@ namespace LovePandas.UI
             if (stage != Stage.Home) return;
             switch (screen)
             {
-                case "board": OpenSheet(Screen.Board); break;
+                case "board": OpenOrders(); break;
+                case "board-new": OpenOrders(); orders.OpenModal(); break;
                 case "inventory": OpenInventory(); break;
-                default: CloseSheet(); break;
+                default: inventory.Close(); orders.Close(); break;
             }
         }
 
@@ -484,29 +349,6 @@ namespace LovePandas.UI
             return c;
         }
 
-        static VisualElement Price(int amount, string cls)
-        {
-            var row = Row("price");
-            row.Add(Coin());
-            var l = new Label(amount.ToString());
-            l.AddToClassList(cls);
-            row.Add(l);
-            return row;
-        }
-
-        static void Section(VisualElement parent, string text)
-        {
-            var l = new Label(text);
-            l.AddToClassList("section-title");
-            parent.Add(l);
-        }
-
-        static void Empty(VisualElement parent, string text)
-        {
-            var l = new Label(text);
-            l.AddToClassList("empty");
-            parent.Add(l);
-        }
 
         static VisualElement Row(string cls)
         {
