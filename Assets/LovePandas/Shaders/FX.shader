@@ -11,6 +11,7 @@ Shader "LovePandas/FX"
         [Toggle] _ZWrite ("ZWrite", Float) = 0
         _Wind ("Wind (UV wobble for backdrop foliage)", Range(0, 0.02)) = 0
         _GroundLine ("Ground line (v below is still)", Range(0, 1)) = 0.4
+        _Multiply ("Multiply mode (тени: Blend DstColor Zero)", Float) = 0
     }
 
     SubShader
@@ -30,7 +31,7 @@ Shader "LovePandas/FX"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
-                half _Wind, _GroundLine;
+                half _Wind, _GroundLine, _Multiply;
             CBUFFER_END
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -57,7 +58,10 @@ Shader "LovePandas/FX"
                     uv.x += (sin(t * 1.3 + uv.y * 11.0) + 0.5 * sin(t * 2.1 + uv.y * 23.0 + uv.x * 5.0)) * _Wind * mask;
                     uv.y += sin(t * 1.0 + uv.x * 9.0) * _Wind * 0.5 * mask;
                 }
-                return SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv) * _BaseColor * i.color;
+                half4 c = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv) * _BaseColor * i.color;
+                // режим умножения для теней: пол умножается на цвет тени по маске альфы (1 — без изменений)
+                if (_Multiply > 0.5) return half4(lerp(half3(1, 1, 1), _BaseColor.rgb, c.a), 1);
+                return c;
             }
             ENDHLSL
         }

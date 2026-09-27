@@ -38,17 +38,17 @@ namespace LovePandas.App
         }
 
         /// Локация: камера, свет под нарисованный фон и атмосфера (Atmosphere).
-        /// Камера смотрит горизонтально: лапы персонажа на ~22% высоты экрана, голова на ~62% — он стоит на площадке фона.
+        /// Камера поднята и смотрит чуть сверху — как точка зрения художника на фоне: тогда панда стоит на плитах
+        /// в той же перспективе, а не «парит», и тень на полу видна овалом. Лапы — на ~22% высоты экрана.
         static void BuildLocation(Transform parent)
         {
             var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
             cam.transform.SetParent(parent, false);
-            cam.transform.localPosition = new Vector3(0, 1.6f, -8f);
+            cam.transform.localPosition = new Vector3(0, 3.6f, -8f);
+            cam.transform.localRotation = Quaternion.Euler(12.7f, 0, 0);
             cam.fieldOfView = 40;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.1f, 0.2f, 0.2f);
-            cam.gameObject.AddComponent<CameraRig>();
-
             // Солнце сверху-слева, как луч на фоне; тёплое. Бирюзовый заполняющий свет — цвет джунглей.
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.transform.SetParent(parent, false);

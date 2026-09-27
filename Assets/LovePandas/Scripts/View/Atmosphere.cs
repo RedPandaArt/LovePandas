@@ -42,14 +42,8 @@ namespace LovePandas.View
             shaft.localRotation = Quaternion.Euler(0, 0, -18);
             shaft.localScale = new Vector3(2.6f, 8f, 1);
 
-            Platform(world);
-
-            // Тень под лапами на платформе
-            var blob = Quad("BlobShadow", world, FX(RadialTexture(), new Color(0.04f, 0.05f, 0.04f, 0.75f), additive: false)).transform;
-            blob.localPosition = new Vector3(0, 0.012f, 0);
-            blob.localRotation = Quaternion.Euler(90, 0, 0);
-            blob.localScale = new Vector3(1.6f, 1.1f, 1);
-
+            // Пол — нарисованная площадка на фоне: отдельной платформы нет, иначе видно «два пола».
+            // Тень под лапами вешает на себя панда (ContactShadow), чтобы тень шла вместе с ней.
             Dust(world);
             PostFX();
         }
@@ -69,21 +63,58 @@ namespace LovePandas.View
             shaftMat.SetColor("_BaseColor", c);
         }
 
-        /// Каменный диск под пандой (Art/build_ui.py → Models/Env/platform): верх — текстура плит, мох и камешки — простой материал.
-        static void Platform(Transform world)
+        /// Тень под лапами на нарисованном полу — «сажает» панду на пол. Вешается на панду и едет вместе с ней.
+        /// Плоская, лежит на полу; задняя половина честно прячется за телом, видна передняя — перед лапами.
+        /// Камера смотрит почти горизонтально, поэтому тень крупная по глубине и с плотной серединой
+        /// (у мягкой радиальной текстуры видимые края почти прозрачны — тени «нет»).
+        /// Не рисовать её в очереди &lt; 2500: в URP это непрозрачный проход, порядок с фоном там не гарантирован.
+        public static Transform ContactShadow(Transform parent)
         {
-            var prefab = Resources.Load<GameObject>("Models/Env/platform");
-            if (prefab == null) return;
-            var p = Instantiate(prefab, world, false);
-            p.name = "Platform";
-            var stone = new Material(Resources.Load<Material>("Materials/Base"));
-            stone.SetTexture("_BaseMap", Resources.Load<Texture2D>("Textures/stone"));
-            stone.SetFloat("_OutlineWidth", 0.006f);
-            foreach (var r in p.GetComponentsInChildren<Renderer>())
+            var root = new GameObject("ContactShadow").transform;
+            root.SetParent(parent, false);
+            // Альфа-смешивание тут вело себя непредсказуемо (0.5–0.8 почти не видно, 1.0 — чёрная дыра),
+            // поэтому тень умножает пол на тёмный оттенок: цвет прямо задаёт, насколько темнее станет пол.
+            // диск с прозрачностью в вершинах (Shapes.Disc), радиус 1 → масштаб = полуоси овала.
+            // Повёрнут к камере с наклоном 60° (как лежащий на полу, но не сплющенный в нитку) и стоит на уровне лап,
+            // чуть перед ними — поэтому тело его не закрывает.
+            var soft = Shapes.Disc("Soft", root, ShadowMat(new Color(0.5f, 0.48f, 0.43f))).transform;
+            soft.localPosition = new Vector3(0, 0.02f, -0.15f);
+            soft.localRotation = Quaternion.Euler(60, 0, 0);
+            soft.localScale = new Vector3(1.35f, 0.62f, 1);
+            var core = Shapes.Disc("Core", root, ShadowMat(new Color(0.36f, 0.34f, 0.3f))).transform;
+            core.localPosition = new Vector3(0, 0.03f, -0.12f);
+            core.localRotation = Quaternion.Euler(60, 0, 0);
+            core.localScale = new Vector3(0.8f, 0.3f, 1);
+            return root;
+        }
+
+        /// Материал тени-умножения: пол × tint по маске пятна (tint 1 — не темнее, 0.5 — вдвое темнее).
+        static Material ShadowMat(Color tint)
+        {
+            var m = FX(Texture2D.whiteTexture, tint, additive: false);
+            m.SetFloat("_Multiply", 1f);
+            m.SetFloat("_SrcBlend", (float)BlendMode.DstColor);
+            m.SetFloat("_DstBlend", (float)BlendMode.Zero);
+            return m;
+        }
+
+        static Texture2D core;
+
+        /// Пятно с плотной серединой и коротким мягким краем — для контактной тени прямо под лапами.
+        static Texture2D CoreTexture()
+        {
+            if (core != null) return core;
+            const int n = 64;
+            core = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
             {
-                r.sharedMaterial = r.name.Contains("Decor") ? Materials.Lit(Color.white) : stone;
-                r.shadowCastingMode = ShadowCastingMode.Off;
+                float dx = (x + 0.5f) / n * 2 - 1, dy = (y + 0.5f) / n * 2 - 1;
+                float a = Mathf.SmoothStep(0, 1, Mathf.Clamp01((1 - Mathf.Sqrt(dx * dx + dy * dy)) / 0.45f));
+                core.SetPixel(x, y, new Color(1, 1, 1, a));
             }
+            core.Apply();
+            return core;
         }
 
         void Dust(Transform world)

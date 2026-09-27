@@ -26,6 +26,41 @@ namespace LovePandas.View
             return go;
         }
 
+        static Mesh disc;
+
+        /// Мягкое пятно-диск радиуса 1 в плоскости XY: плотная середина (до 0.5), к краю прозрачность падает до 0.
+        /// Прозрачность — в цветах вершин, без текстуры (для теней).
+        public static GameObject Disc(string name, Transform parent, Material mat) =>
+            Make(name, parent, disc != null ? disc : disc = BuildDisc(), mat);
+
+        static Mesh BuildDisc()
+        {
+            const int seg = 32;
+            var v = new Vector3[1 + seg * 2];
+            var c = new Color[v.Length];
+            var uv = new Vector2[v.Length];
+            v[0] = Vector3.zero; c[0] = Color.white; uv[0] = new Vector2(0.5f, 0.5f);
+            for (int i = 0; i < seg; i++)
+            {
+                float a = i * Mathf.PI * 2 / seg;
+                var dir = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0);
+                v[1 + i] = dir * 0.5f; c[1 + i] = Color.white;
+                v[1 + seg + i] = dir; c[1 + seg + i] = new Color(1, 1, 1, 0);
+                uv[1 + i] = uv[1 + seg + i] = new Vector2(0.5f, 0.5f);
+            }
+            var tris = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < seg; i++)
+            {
+                int n = (i + 1) % seg;
+                tris.AddRange(new[] { 0, 1 + n, 1 + i });                           // середина
+                tris.AddRange(new[] { 1 + i, 1 + n, 1 + seg + n, 1 + i, 1 + seg + n, 1 + seg + i }); // мягкий край
+            }
+            var m = new Mesh { name = "LP_Disc", vertices = v, colors = c, uv = uv, triangles = tris.ToArray() };
+            m.RecalculateNormals();
+            m.RecalculateBounds();
+            return m;
+        }
+
         static Mesh BuildQuad()
         {
             var m = new Mesh { name = "LP_Quad" };

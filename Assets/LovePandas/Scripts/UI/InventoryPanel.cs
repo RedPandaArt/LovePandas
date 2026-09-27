@@ -14,11 +14,11 @@ namespace LovePandas.UI
     /// Купленное — цветное (тап надевает/снимает), некупленное — серое с ценником (тап примеряет, «Купить» покупает).
     /// Примерка — только на клиенте (CharacterView.Preview), снимается при закрытии.
     /// UI здесь — прозрачный слой касаний, ценники/отметки над гнёздами, крестик и кнопка «Купить».
-    /// Свайп справа от доски крутит панду; камера отодвигает панду вправо (CameraRig).
+    /// Свайп справа от доски крутит панду; сама панда отходит вправо по неподвижному полу.
     public class InventoryPanel
     {
-        const float CharacterViewportX = 0.76f;
-        const float Zoom = 1.25f;
+        const float CharacterViewportX = 0.75f; // куда отходит панда, чтобы доска слева её не закрывала
+        const float Shrink = 0.8f;              // и чуть уменьшается «от лап», оставаясь на плитах
         const float TapSlop = 30f; // px панели: больше — это свайп, а не тап
 
         static readonly Category[] TabOrder = { Category.Weapon, Category.Hat, Category.Clothes, Category.Boots };
@@ -111,7 +111,7 @@ namespace LovePandas.UI
             root.AddToClassList("inv-open");
             foreach (var e in new[] { hit, labelsLayer, close }) e.RemoveFromClassList("hidden");
             character.UserYaw = 0;
-            Rig()?.Focus(CharacterViewportX, Zoom);
+            character.MoveTo(CharacterViewportX, Shrink);
             board.Show();
             Render();
         }
@@ -126,7 +126,7 @@ namespace LovePandas.UI
             character.Preview.Clear();
             character.UserYaw = 0;
             character.Reapply();
-            Rig()?.Reset();
+            character.MoveTo(0.5f);
             board.Hide();
             Closed?.Invoke();
         }
@@ -136,7 +136,6 @@ namespace LovePandas.UI
             if (IsOpen) Render();
         }
 
-        static CameraRig Rig() => Camera.main != null ? Camera.main.GetComponent<CameraRig>() : null;
 
         // ---------- Содержимое доски ----------
 

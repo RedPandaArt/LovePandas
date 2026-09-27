@@ -90,9 +90,10 @@ namespace LovePandas.View
             hanger.localPosition = new Vector3(x, y, Distance);
             hanger.localScale = Vector3.one * scale;
 
-            swing = Mathf.Lerp(swing, 0, 1 - Mathf.Exp(-dt * 1.5f));
+            // качнётся после спуска и затихнет — дальше доска неподвижна; живут только вещи в гнёздах
+            swing = Mathf.Lerp(swing, 0, 1 - Mathf.Exp(-dt * 2.5f));
             float t = Time.time;
-            hanger.localRotation = Quaternion.Euler(0, Mathf.Sin(t * 0.5f) * 2f, Mathf.Sin(t * 3.2f) * swing + Mathf.Sin(t * 0.7f) * 0.6f);
+            hanger.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(t * 3.2f) * swing);
 
             // вещи в гнёздах медленно вращаются, выбранная вкладка «выдвинута» и покачивается
             for (int i = 0; i < Slots; i++)

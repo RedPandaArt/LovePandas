@@ -76,10 +76,9 @@ namespace LovePandas.View
             hanger.localPosition = new Vector3(x, y, distance);
             hanger.localScale = Vector3.one * Scale;
 
-            swing = Mathf.Lerp(swing, 0, 1 - Mathf.Exp(-dt * 1.5f));
-            float t = Time.time;
-            hanger.localRotation = Quaternion.Euler(0, Mathf.Sin(t * 0.5f) * (cover ? 0.6f : 1.5f),
-                                                    Mathf.Sin(t * 3.2f) * swing + Mathf.Sin(t * 0.7f) * (cover ? 0.25f : 0.5f));
+            // качнётся после спуска и затихнет — дальше доска висит неподвижно, интерфейс не «плавает»
+            swing = Mathf.Lerp(swing, 0, 1 - Mathf.Exp(-dt * 2.5f));
+            hanger.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 3.2f) * swing);
         }
     }
 }

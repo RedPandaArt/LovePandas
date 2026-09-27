@@ -20,7 +20,9 @@ namespace LovePandas.UI
         GameService game;
         CharacterView character;
         VisualElement root, home, overlay;
-        Label coinsLabel, partnerLabel, toast;
+        Label coinsLabel, toast;
+        HudButtons hud;
+        readonly System.Collections.Generic.Dictionary<string, Button> hudHits = new System.Collections.Generic.Dictionary<string, Button>();
         VisualElement nav;
         InventoryPanel inventory;
         OrdersPanel orders;
@@ -83,6 +85,7 @@ namespace LovePandas.UI
             orders?.Tick();
             visit?.Tick();
             inbox?.Tick(stage == Stage.Home && !inventory.IsOpen && !orders.IsOpen && !visit.IsOpen);
+            TickHud();
         }
 
         async void Poll()
@@ -215,30 +218,25 @@ namespace LovePandas.UI
             home.pickingMode = PickingMode.Ignore;
             root.Add(home);
 
-            var top = Row("top-bar");
+            // монеты на главном не нужны — видны только в инвентаре (класс inv-open на корне, см. App.uss)
             var coinsChip = Row("chip");
+            coinsChip.AddToClassList("coins-chip");
             coinsChip.Add(Coin());
             coinsLabel = new Label();
             coinsChip.Add(coinsLabel);
-            top.Add(coinsChip);
+            root.Add(coinsChip);
 
-            // плашка партнёра — кнопка «В гости»: посмотреть его панду и погладить/поцеловать/обнять
-            var who = Row("chip");
-            who.AddToClassList("visit-chip");
-            var houseIcon = new VisualElement { pickingMode = PickingMode.Ignore };
-            houseIcon.AddToClassList("visit-chip-heart");
-            houseIcon.style.backgroundImage = Hearts.Texture;
-            who.Add(houseIcon);
-            partnerLabel = new Label { pickingMode = PickingMode.Ignore };
-            partnerLabel.AddToClassList("player-name");
-            who.Add(partnerLabel);
-            who.RegisterCallback<ClickEvent>(_ => OpenVisit());
-            top.Add(who);
-            home.Add(top);
-
-            nav = Row("nav");
-            nav.Add(Button("Инвентарь", "nav-btn", OpenInventory));
-            nav.Add(Button("Заказы", "nav-btn", OpenOrders));
+            // кнопки главного — 3D-медальоны (View/HudButtons); поверх каждого прозрачная кнопка UI
+            hud = HudButtons.Create(Camera.main);
+            nav = new VisualElement { pickingMode = PickingMode.Ignore };
+            nav.AddToClassList("hud-layer");
+            foreach (var (id, action) in new (string, Action)[] { ("inventory", OpenInventory), ("orders", OpenOrders), ("visit", OpenVisit) })
+            {
+                var hit = new Button(() => { hud.Press(id); action(); });
+                hit.AddToClassList("hud-hit");
+                hudHits[id] = hit;
+                nav.Add(hit);
+            }
             home.Add(nav);
 
 
@@ -264,7 +262,6 @@ namespace LovePandas.UI
         {
             var s = game.State;
             coinsLabel.text = s.me.coins.ToString();
-            partnerLabel.text = s.HasPartner ? $"В гости к {s.partner.name}" : s.me.name;
             // в гостях на сцене панда партнёра
             character.Apply(visit != null && visit.IsOpen && s.HasPartner ? s.partner : s.me, game.Item);
             if (stage != Stage.Connecting && stage != Stage.Offline) Route();
@@ -280,6 +277,30 @@ namespace LovePandas.UI
             inventory.Close();
             nav.AddToClassList("hidden");
             orders.Open();
+        }
+
+        /// Медальоны видны только на главном экране; прозрачные кнопки UI каждый кадр ложатся точно на них.
+        void TickHud()
+        {
+            if (hud == null) return;
+            bool visible = stage == Stage.Home && !nav.ClassListContains("hidden") && !home.ClassListContains("hidden");
+            hud.SetVisible(visible);
+            if (root.panel == null) return;
+            foreach (var kv in hudHits)
+            {
+                Vector3 center = default;
+                float radius = 0;
+                bool ok = visible && hud.TryGet(kv.Key, out center, out radius) && (kv.Key != "visit" || game.State.HasPartner);
+                kv.Value.EnableInClassList("hidden", !ok);
+                if (!ok) continue;
+                var cam = Camera.main;
+                var p = RuntimePanelUtils.CameraTransformWorldToPanel(root.panel, center, cam);
+                float px = (RuntimePanelUtils.CameraTransformWorldToPanel(root.panel, center + cam.transform.right * radius, cam) - p).magnitude;
+                kv.Value.style.left = p.x;
+                kv.Value.style.top = p.y;
+                kv.Value.style.width = px * 2f;
+                kv.Value.style.height = px * 2f;
+            }
         }
 
         void OpenVisit()

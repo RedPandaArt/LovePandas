@@ -100,7 +100,6 @@ namespace LovePandas.UI
             character.Preview.Clear();
             character.UserYaw = 0;
             character.Apply(game.Partner, game.Item);
-            Rig()?.Focus(0.5f, 0.92f);
         }
 
         public void Close()
@@ -109,11 +108,9 @@ namespace LovePandas.UI
             IsOpen = false;
             layer.AddToClassList("hidden");
             character.Apply(game.Me, game.Item);
-            Rig()?.Reset();
             Closed?.Invoke();
         }
 
-        static CameraRig Rig() => Camera.main != null ? Camera.main.GetComponent<CameraRig>() : null;
 
         /// Каждый кадр: зажатие открывает меню.
         public void Tick()

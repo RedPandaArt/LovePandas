@@ -89,13 +89,11 @@ namespace LovePandas.UI
             bool she = game.State.HasPartner && game.Partner.characterId == "red_panda_f"; // род — по тому, кто заглядывал
             string from = inbox[inbox.Count - 1].fromName;
             cardTitle.text = $"К вам заглядывал{(she ? "а" : "")} {from}";
-            cardText.text = string.Join("\n", inbox.GroupBy(i => i.kind).Select(g =>
-            {
-                string verb = g.Key == "pet" ? (she ? "погладила по голове" : "погладил по голове")
-                            : g.Key == "kiss" ? (she ? "поцеловала" : "поцеловал")
-                            : (she ? "обняла" : "обнял");
-                return g.Count() > 1 ? $"{verb} ×{g.Count()}" : verb;
-            }));
+            // что делал — без счётчиков: важен сам жест, а не сколько раз
+            cardText.text = string.Join("\n", inbox.Select(i => i.kind).Distinct().Select(k =>
+                k == "pet" ? (she ? "погладила по голове" : "погладил по голове")
+                : k == "kiss" ? (she ? "поцеловала" : "поцеловал")
+                : (she ? "обняла" : "обнял")));
             card.RemoveFromClassList("hidden");
             character.PlayJoy();
         }

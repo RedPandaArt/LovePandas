@@ -41,6 +41,18 @@ namespace LovePandas.View
         public float UserYaw;
         float yaw;
 
+        // Где по ширине экрана стоит панда (0.5 — по центру). Камера и пол неподвижны — ходит сама панда:
+        // в инвентаре она отходит вправо, чтобы доска слева её не закрывала.
+        float stageViewportX = 0.5f, stageScale = 1f;
+
+        /// Встать в точку экрана vx (0.5 — центр) на том же полу; scale — уменьшиться «от лап»,
+        /// не отрываясь от плит (шаг вглубь сцены не годится: нарисованный пол не совпадает по перспективе — панда «парит»).
+        public void MoveTo(float vx, float scale = 1f)
+        {
+            stageViewportX = vx;
+            stageScale = scale;
+        }
+
         Player lastPlayer;
         System.Func<string, ItemDef> lastLookup;
         string characterId;
@@ -68,6 +80,7 @@ namespace LovePandas.View
         {
             var go = new GameObject("Character");
             go.transform.SetParent(parent, false);
+            Atmosphere.ContactShadow(go.transform);
             return go.AddComponent<CharacterView>();
         }
 
@@ -234,6 +247,22 @@ namespace LovePandas.View
             if (hips != null) hips.localScale = new Vector3(1 + hug * 0.08f, 1 + Mathf.Sin(t * 2.2f) * 0.018f - hug * 0.07f, 1 + hug * 0.05f);
             float hop = joy > 0 ? Mathf.Abs(joyWave) * 0.35f * joy : 0f;
             model.localPosition = new Vector3(0, hop, 0);
+            // перейти к нужному месту по неподвижному полу, с лёгким подпрыгиванием на ходу
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                var p = transform.localPosition;
+                float k = 1 - Mathf.Exp(-Time.deltaTime * 6f);
+                float depth = Vector3.Dot(transform.position - cam.transform.position, cam.transform.forward);
+                float halfW = depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * cam.aspect;
+                float targetX = (stageViewportX - 0.5f) * 2f * halfW;
+                float nx = Mathf.Lerp(p.x, targetX, k);
+                float speed = Mathf.Abs(nx - p.x) / Mathf.Max(Time.deltaTime, 0.0001f);
+                transform.localPosition = new Vector3(nx, 0, p.z);
+                transform.localScale = Vector3.one * Mathf.Lerp(transform.localScale.x, stageScale, k);
+                if (speed > 0.3f) model.localPosition += Vector3.up * Mathf.Abs(Mathf.Sin(t * 14f)) * Mathf.Min(speed * 0.04f, 0.12f);
+            }
+
             yaw = Mathf.LerpAngle(yaw, UserYaw, 1 - Mathf.Exp(-Time.deltaTime * 12f));
             model.localRotation = Quaternion.Euler(0, Yaw + yaw, 0);
 

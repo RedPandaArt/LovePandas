@@ -158,40 +158,7 @@ if PREVIEW:
     scene.render.filepath = PREVIEW
     bpy.ops.render.render(write_still=True)
 
-# ---------- Платформа под пандой ----------
-# Каменный диск: верх — текстура плит из фона (UV-проекция сверху), бок — тёмный камень, по краю мох и камешки.
-STONE_SIDE = (0.42, 0.38, 0.34)
-bpy.ops.wm.read_factory_settings(use_empty=True)
-R_PLAT, H_PLAT = 1.35, 0.22
-bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=R_PLAT, depth=H_PLAT, location=(0, 0, -H_PLAT / 2))
-plat = bpy.context.object
-m = plat.modifiers.new("B", 'BEVEL'); m.width = 0.05; m.segments = 3; m.limit_method = 'ANGLE'
-bpy.ops.object.modifier_apply(modifier="B")
-me = plat.data
-uv = me.uv_layers.new(name="UV")
-col = me.color_attributes.new("Col", 'FLOAT_COLOR', 'CORNER')
-side = lin(STONE_SIDE)
-for poly in me.polygons:
-    top = poly.normal.z > 0.7
-    poly.use_smooth = not top and poly.normal.z > -0.7
-    for li in poly.loop_indices:
-        co = me.vertices[me.loops[li].vertex_index].co
-        uv.data[li].uv = (co.x / (2 * R_PLAT) + 0.5, co.y / (2 * R_PLAT) + 0.5)
-        col.data[li].color = (1, 1, 1, 1) if top else (side[0], side[1], side[2], 1)
-plat.name = "Platform"
-extra = []
-for k in range(14):
-    a = 2 * math.pi * k / 14 + 0.3
-    r = R_PLAT - 0.02
-    if k % 3 == 0:
-        extra.append(sph("Moss", MOSS, (math.cos(a) * r, math.sin(a) * r, -0.02), 0.12, (1.4, 0.9, 0.45)))
-    elif k % 3 == 1:
-        extra.append(sph("Pebble", STONE_SIDE, (math.cos(a) * (r + 0.08), math.sin(a) * (r + 0.08), -0.16), 0.07, (1.2, 1, 0.7)))
-# Мох и камешки — отдельным мешем: у них нет текстуры, Unity даёт им простой материал.
-decor = join(extra, "PlatformDecor")
-env_dir = os.path.join(os.path.dirname(OUT.rstrip("/\\")), "Env")
-os.makedirs(env_dir, exist_ok=True)
-export(os.path.join(env_dir, "platform.fbx"), [plat, decor])
+# Платформу-диск под пандой пробовали и убрали: поверх нарисованного пола получалось «два пола».
 
 # ---------- Доска заказов ----------
 # Большой щит на весь экран: доски, толстая рамка из брёвен, табличка-заголовок, две колонки листков
@@ -293,6 +260,86 @@ me_ = [empty("Title", (0, -0.1, MH / 2 - 0.13)), empty("Field", (0, -0.1, 0.02))
        empty("Close", (MW / 2 - 0.02, -0.1, MH / 2 + 0.02))]
 for e in me_: e.parent = mb
 export(os.path.join(OUT, "modal_board.fbx"), [mb] + me_)
+
+# ---------- HUD: деревянные медальоны-кнопки с 3D-иконками ----------
+# Каждый файл — медальон + иконка перед ним, центр в нуле, диаметр медальона 1.
+# hud_inventory — сундучок, hud_orders — свиток с печатью, hud_visit — домик с сердечком.
+GOLD_ = (1.0, 0.8, 0.3)
+IRON = (0.3, 0.3, 0.34)
+CREAM_ = (0.97, 0.9, 0.74)
+RED_ = (0.82, 0.16, 0.18)
+PINK_ = (0.98, 0.42, 0.55)
+WALL = (0.98, 0.9, 0.78)
+ROOF = (0.86, 0.36, 0.2)
+
+def medallion():
+    parts = [cyl("Disc", DISC, (0, 0.04, 0), 0.5, 0.1, rot=(90, 0, 0), verts=48),
+             torus("Rim", WOOD_DARK, (0, -0.01, 0), 0.5, 0.05, rot=(90, 0, 0)),
+             sph("Moss", MOSS, (-0.34, -0.03, -0.36), 0.1, (1.3, 0.5, 0.8))]
+    return parts
+
+def heart(name, loc, size, color, glow=False):
+    """Объёмное сердце: две сферы и конус остриём вниз (в плоскости XZ, лицом к −Y)."""
+    x, y, z = loc
+    s = size
+    # треугольная призма (цилиндр из 3 граней, первая вершина по +Y): X−90 ставит её остриём вниз в плоскости XZ
+    parts = [sph(name + "L", color, (x - 0.26 * s, y, z + 0.12 * s), 0.3 * s, (1, 0.7, 1)),
+             sph(name + "R", color, (x + 0.26 * s, y, z + 0.12 * s), 0.3 * s, (1, 0.7, 1)),
+             cyl(name + "Tip", color, (x, y, z - 0.12 * s), 0.52 * s, 0.4 * s, rot=(-90, 0, 0), verts=3,
+                 scale=(1.0, 1.1, 1))]
+    for o in parts: paint(o, color, glow)
+    return parts
+
+def hud_inventory():
+    p = []
+    p.append(box("ChestBody", WOOD, (0, -0.22, -0.08), (0.52, 0.3, 0.3), bevel=0.03))
+    p.append(cyl("ChestLid", WOOD_DARK, (0, -0.22, 0.07), 0.15, 0.52, rot=(0, 90, 0), verts=24, scale=(1, 1, 1)))
+    for x in (-0.17, 0.17):
+        p.append(box("Band", IRON, (x, -0.22, -0.02), (0.05, 0.32, 0.46), bevel=0.01))
+    p.append(box("Lock", GOLD_, (0, -0.385, -0.03), (0.09, 0.03, 0.1), bevel=0.01))
+    return p
+
+def hud_orders():
+    p = []
+    p.append(box("Sheet", CREAM_, (0, -0.2, -0.02), (0.42, 0.02, 0.5), bevel=0.01))
+    for z in (0.25, -0.29):
+        p.append(cyl("Roll", (0.9, 0.8, 0.62), (0, -0.21, z), 0.055, 0.5, rot=(0, 90, 0), verts=16))
+    for k, z in enumerate((0.1, 0.0, -0.1)):
+        p.append(box("Line%d" % k, (0.55, 0.42, 0.3), (-0.02, -0.215, z), (0.26 - k * 0.04, 0.005, 0.018)))
+    p.append(cyl("Seal", RED_, (0.1, -0.23, -0.19), 0.075, 0.03, rot=(90, 0, 0), verts=20))
+    return p
+
+def hud_visit():
+    p = []
+    p.append(box("Walls", WALL, (0, -0.2, -0.12), (0.42, 0.3, 0.3), bevel=0.02))
+    # крыша — треугольная призма
+    # крыша: призма коньком вверх (первая вершина цилиндра по +Y, X90 переводит её в +Z)
+    p.append(cyl("Roof", ROOF, (0, -0.2, 0.06), 0.3, 0.36, rot=(90, 0, 0), verts=3, scale=(1.35, 0.8, 1)))
+    p.append(box("Door", WOOD_DARK, (0.07, -0.355, -0.17), (0.1, 0.01, 0.17)))
+    p.append(box("Window", (0.55, 0.8, 0.95), (-0.1, -0.355, -0.08), (0.08, 0.01, 0.08)))
+    p += heart("Heart", (0.18, -0.3, 0.3), 0.32, PINK_, glow=True)
+    return p
+
+for fn, name in ((hud_inventory, "hud_inventory"), (hud_orders, "hud_orders"), (hud_visit, "hud_visit")):
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    # два объекта: неподвижная плашка-медальон и иконка на ней (в Unity шевелится только иконка)
+    plaque = join(medallion(), "Plaque")
+    icon = join(fn(), "Icon")
+    export(os.path.join(OUT, name + ".fbx"), [plaque, icon])
+    if PREVIEW:
+        scene = bpy.context.scene
+        scene.render.engine = 'BLENDER_WORKBENCH'
+        scene.display.shading.light = 'STUDIO'
+        scene.display.shading.color_type = 'VERTEX'
+        scene.display.shading.show_object_outline = True
+        scene.render.resolution_x = scene.render.resolution_y = 300
+        cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+        bpy.context.collection.objects.link(cam)
+        scene.camera = cam
+        cam.location = (0.35, -3.2, 0.2)
+        cam.rotation_euler = (math.radians(87), 0, math.radians(6))
+        scene.render.filepath = os.path.join(os.path.dirname(PREVIEW), name + ".png")
+        bpy.ops.render.render(write_still=True)
 
 # ---------- Кольцо подсветки (цвет задаёт Unity) ----------
 bpy.ops.wm.read_factory_settings(use_empty=True)
