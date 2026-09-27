@@ -9,10 +9,10 @@ namespace LovePandas.View
     /// в шапке — медальоны категорий с мини-моделями. Надписи и нажатия — в UI (InventoryPanel).
     public class BoardView : MonoBehaviour
     {
-        public const int Slots = 6;
+        public const int Slots = 10;
         const float Distance = 3f;          // от камеры
         const float VisualWidth = 1.3f;     // доска с брёвнами, в единицах модели
-        const float VisualHeight = 2.62f;
+        const float VisualHeight = 3.52f;   // шапка + 5 рядов гнёзд + брёвна
         const float ItemRadius = 0.16f, TabRadius = 0.088f;
 
         // вещь-символ для каждой вкладки
@@ -84,9 +84,10 @@ namespace LovePandas.View
             // место на экране: левые ~55% ширины, по высоте — сколько влезет
             float halfH = Distance * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
             float halfW = halfH * cam.aspect;
-            scale = Mathf.Min(0.54f * 2f * halfW / VisualWidth, 0.76f * 2f * halfH / VisualHeight);
+            // над нижней плашкой магазина (она занимает низ экрана ~15%)
+            scale = Mathf.Min(0.54f * 2f * halfW / VisualWidth, 0.74f * 2f * halfH / VisualHeight);
             float x = (0.295f - 0.5f) * 2f * halfW;
-            float y = (0.54f - 0.5f) * 2f * halfH + (1f - open) * 2.2f * halfH;
+            float y = (0.58f - 0.5f) * 2f * halfH + (1f - open) * 2.2f * halfH;
             hanger.localPosition = new Vector3(x, y, Distance);
             hanger.localScale = Vector3.one * scale;
 

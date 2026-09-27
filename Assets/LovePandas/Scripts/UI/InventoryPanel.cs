@@ -29,9 +29,15 @@ namespace LovePandas.UI
         readonly CharacterView character;
         readonly BoardView board;
         readonly Func<Func<Task<string>>, string, Action, Task> run;
-        readonly VisualElement root, hit, labelsLayer, buyBar;
-        readonly Button close, buyButton;
-        readonly Label buyLabel;
+        readonly VisualElement root, hit, labelsLayer, shopLayer;
+        readonly Button close, buyHit;
+        readonly Label coinText, itemText, buyText;
+        // нижняя 3D-плашка магазина: монета и баланс, название примеряемой вещи, кнопка «Купить»
+        readonly HangingBoard shop;
+        readonly Renderer buyBtn;
+        readonly Vector3 buyBtnScale;
+        float buyPunch = -10f;
+        static readonly Color BuyOn = new Color(1f, 1f, 1f), BuyOff = new Color(0.55f, 0.52f, 0.5f);
         readonly VisualElement[] slotLabels = new VisualElement[BoardView.Slots]; // ценник или отметка под гнездом
         readonly Label[] slotTexts = new Label[BoardView.Slots];
         readonly List<ItemDef> shown = new List<ItemDef>();
@@ -92,27 +98,37 @@ namespace LovePandas.UI
             close.AddToClassList("hidden");
             root.Add(close);
 
-            buyBar = new VisualElement();
-            buyBar.AddToClassList("inv-buy");
-            buyBar.AddToClassList("hidden");
-            buyLabel = new Label();
-            buyLabel.AddToClassList("inv-buy-label");
-            buyBar.Add(buyLabel);
-            buyButton = new Button(Buy);
-            buyButton.AddToClassList("action-btn");
-            buyButton.AddToClassList("inv-buy-btn");
-            buyBar.Add(buyButton);
-            root.Add(buyBar);
+            shop = HangingBoard.Create(Camera.main, "Models/UI/shop_plank", 2.4f, 3.1f, 0.62f,
+                                       new Rect(0.5f, 0.075f, 1.0f, 0.14f), false, Materials.Lit(Color.white), fromBelow: true);
+            buyBtn = shop.Root.GetComponentsInChildren<Renderer>(true).First(r => r.name == "BuyBtn");
+            buyBtnScale = buyBtn.transform.localScale;
+
+            shopLayer = new VisualElement { pickingMode = PickingMode.Ignore };
+            shopLayer.AddToClassList("inv-labels");
+            shopLayer.AddToClassList("hidden");
+            coinText = new Label { pickingMode = PickingMode.Ignore };
+            coinText.AddToClassList("shop-coins");
+            shopLayer.Add(coinText);
+            itemText = new Label { pickingMode = PickingMode.Ignore };
+            itemText.AddToClassList("shop-item");
+            shopLayer.Add(itemText);
+            buyHit = new Button(Buy);
+            buyHit.AddToClassList("shop-buy");
+            buyText = new Label { pickingMode = PickingMode.Ignore };
+            buyHit.Add(buyText);
+            shopLayer.Add(buyHit);
+            root.Add(shopLayer);
         }
 
         public void Open()
         {
             IsOpen = true;
             root.AddToClassList("inv-open");
-            foreach (var e in new[] { hit, labelsLayer, close }) e.RemoveFromClassList("hidden");
+            foreach (var e in new[] { hit, labelsLayer, close, shopLayer }) e.RemoveFromClassList("hidden");
             character.UserYaw = 0;
             character.MoveTo(CharacterViewportX, Shrink);
             board.Show();
+            shop.Show();
             Render();
         }
 
@@ -121,7 +137,8 @@ namespace LovePandas.UI
             if (!IsOpen) return;
             IsOpen = false;
             root.RemoveFromClassList("inv-open");
-            foreach (var e in new[] { hit, labelsLayer, close, buyBar }) e.AddToClassList("hidden");
+            foreach (var e in new[] { hit, labelsLayer, close, shopLayer }) e.AddToClassList("hidden");
+            shop.Hide();
             trying = null;
             character.Preview.Clear();
             character.UserYaw = 0;
@@ -173,14 +190,13 @@ namespace LovePandas.UI
                 else label.AddToClassList("hidden");
             }
 
-            bool showBuy = trying != null && !game.Owns(trying.id);
-            buyBar.EnableInClassList("hidden", !showBuy);
-            if (showBuy)
-            {
-                buyLabel.text = trying.name;
-                buyButton.text = $"Купить · {trying.price}";
-                buyButton.SetEnabled(game.Me.coins >= trying.price);
-            }
+            // нижняя плашка: баланс, что примеряем, «Купить» (тусклая, если нечего купить или не хватает монет)
+            coinText.text = game.Me.coins.ToString();
+            bool canBuy = trying != null && !game.Owns(trying.id) && game.Me.coins >= trying.price;
+            itemText.text = trying != null && !game.Owns(trying.id) ? trying.name : "Тапни вещь, чтобы примерить";
+            buyText.text = trying != null && !game.Owns(trying.id) ? $"Купить · {trying.price}" : "Купить";
+            buyHit.SetEnabled(canBuy);
+            buyBtn.sharedMaterial = Materials.Lit(canBuy ? BuyOn : BuyOff);
         }
 
         /// Каждый кадр (из AppUI.Update): надписи и крестик едут за доской, пока она спускается и качается.
@@ -198,6 +214,24 @@ namespace LovePandas.UI
             var c = RuntimePanelUtils.CameraTransformWorldToPanel(panel, board.CloseWorld, cam);
             close.style.left = c.x;
             close.style.top = c.y;
+
+            // нижняя плашка: надписи на пустышках модели; прозрачная кнопка ровно по 3D-кнопке
+            if (!shop.Visible) return;
+            Vector2 P(string anchor) => RuntimePanelUtils.CameraTransformWorldToPanel(panel, shop.Anchor(anchor).position, cam);
+            var cp = P("CoinText"); coinText.style.left = cp.x; coinText.style.top = cp.y;
+            var ip = P("ItemText"); itemText.style.left = ip.x; itemText.style.top = ip.y;
+            var bp = P("BuyText");
+            var b = buyBtn.bounds;
+            var bmin = RuntimePanelUtils.CameraTransformWorldToPanel(panel, b.min, cam);
+            var bmax = RuntimePanelUtils.CameraTransformWorldToPanel(panel, b.max, cam);
+            buyHit.style.left = bp.x;
+            buyHit.style.top = bp.y;
+            buyHit.style.width = Mathf.Abs(bmax.x - bmin.x);
+            buyHit.style.height = Mathf.Abs(bmax.y - bmin.y);
+            // 3D-кнопка «проседает» при нажатии
+            float since = Time.time - buyPunch;
+            float s = since < 0.3f ? 1f - Mathf.Sin(since / 0.3f * Mathf.PI) * 0.12f : 1f;
+            buyBtn.transform.localScale = buyBtnScale * s;
         }
 
         // ---------- Касания ----------
@@ -263,6 +297,7 @@ namespace LovePandas.UI
         {
             var item = trying;
             if (item == null) return;
+            buyPunch = Time.time;
             _ = run(() => game.Buy(item), $"{item.name} — твоё!", () =>
             {
                 character.Preview.Remove(item.Slot);

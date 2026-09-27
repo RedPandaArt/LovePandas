@@ -353,8 +353,23 @@
     background-color: rgba(0, 0, 0, 0);
 }
 .hud-hit:hover, .hud-hit:active, .hud-hit:focus { background-color: rgba(0, 0, 0, 0); }
-.coins-chip { position: absolute; left: 32px; top: 48px; display: none; }
-.inv-open .coins-chip { display: flex; }
+/* нижняя 3D-плашка магазина (InventoryPanel): позиции задаёт код */
+.shop-coins, .shop-item, .shop-buy { position: absolute; translate: -50% -50%; }
+.shop-coins { translate: 0 -50%; font-size: 44px; -unity-font-style: bold; color: rgb(255, 238, 205); text-shadow: 0 3px 3px rgba(40, 20, 8, 0.9); }
+.shop-item { width: 34%; font-size: 26px; -unity-text-align: middle-center; white-space: normal; color: rgb(255, 238, 205); text-shadow: 0 2px 3px rgba(40, 20, 8, 0.9); }
+.shop-buy {
+    margin: 0; padding: 0;
+    border-width: 0;
+    border-radius: 30px;
+    background-color: rgba(0, 0, 0, 0);
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+}
+.shop-buy:hover, .shop-buy:active, .shop-buy:focus { background-color: rgba(0, 0, 0, 0); }
+.shop-buy:disabled { color: rgb(235, 225, 215); }
 
 /* Метка dev-сборки (LP_DEV) */
 .dev-badge {

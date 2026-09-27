@@ -20,7 +20,7 @@ namespace LovePandas.UI
         GameService game;
         CharacterView character;
         VisualElement root, home, overlay;
-        Label coinsLabel, toast;
+        Label toast;
         HudButtons hud;
         readonly System.Collections.Generic.Dictionary<string, Button> hudHits = new System.Collections.Generic.Dictionary<string, Button>();
         VisualElement nav;
@@ -218,13 +218,7 @@ namespace LovePandas.UI
             home.pickingMode = PickingMode.Ignore;
             root.Add(home);
 
-            // монеты на главном не нужны — видны только в инвентаре (класс inv-open на корне, см. App.uss)
-            var coinsChip = Row("chip");
-            coinsChip.AddToClassList("coins-chip");
-            coinsChip.Add(Coin());
-            coinsLabel = new Label();
-            coinsChip.Add(coinsLabel);
-            root.Add(coinsChip);
+            // монеты на главном не нужны — баланс показывает нижняя плашка магазина в инвентаре
 
             // кнопки главного — 3D-медальоны (View/HudButtons); поверх каждого прозрачная кнопка UI
             hud = HudButtons.Create(Camera.main);
@@ -261,7 +255,6 @@ namespace LovePandas.UI
         void Refresh()
         {
             var s = game.State;
-            coinsLabel.text = s.me.coins.ToString();
             // в гостях на сцене панда партнёра
             character.Apply(visit != null && visit.IsOpen && s.HasPartner ? s.partner : s.me, game.Item);
             if (stage != Stage.Connecting && stage != Stage.Offline) Route();

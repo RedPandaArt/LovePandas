@@ -14,6 +14,7 @@ namespace LovePandas.View
         float distance, visualW, visualH;
         Rect viewport;       // куда вписать (доли экрана: x, y — центр, width/height — максимум)
         bool cover;          // закрыть весь экран (больше рамки), а не вписаться
+        bool fromBelow;      // выезжать снизу, а не спускаться сверху
         float open, openVel, target, swing;
 
         public float Scale { get; private set; } = 1f;
@@ -23,7 +24,7 @@ namespace LovePandas.View
         public Camera Camera => cam;
 
         public static HangingBoard Create(Camera cam, string prefab, float distance, float visualW, float visualH,
-                                          Rect viewport, bool cover, Material material)
+                                          Rect viewport, bool cover, Material material, bool fromBelow = false)
         {
             var go = new GameObject("Hanging_" + prefab.Replace('/', '_'));
             go.transform.SetParent(cam.transform, false);
@@ -35,6 +36,7 @@ namespace LovePandas.View
             hb.visualH = visualH;
             hb.viewport = viewport;
             hb.cover = cover;
+            hb.fromBelow = fromBelow;
             hb.model = Instantiate(Resources.Load<GameObject>(prefab), go.transform, false).transform;
             foreach (var r in hb.model.GetComponentsInChildren<Renderer>())
             {
@@ -72,7 +74,8 @@ namespace LovePandas.View
             float sw = viewport.width * 2f * halfW / visualW, sh = viewport.height * 2f * halfH / visualH;
             Scale = cover ? Mathf.Max(sw, sh) : Mathf.Min(sw, sh);
             float x = (viewport.x - 0.5f) * 2f * halfW;
-            float y = (viewport.y - 0.5f) * 2f * halfH + (1f - open) * 2.3f * halfH;
+            // сверху — спускается на верёвках, снизу (fromBelow) — выезжает из-под края экрана
+            float y = (viewport.y - 0.5f) * 2f * halfH + (1f - open) * 2.3f * halfH * (fromBelow ? -0.4f : 1f);
             hanger.localPosition = new Vector3(x, y, distance);
             hanger.localScale = Vector3.one * Scale;
 

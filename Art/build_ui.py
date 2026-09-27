@@ -20,7 +20,7 @@ LEAF = (0.30, 0.62, 0.40)
 NAIL = (0.25, 0.25, 0.28)
 DISC = (0.86, 0.66, 0.42)
 
-W, H, D = 1.0, 2.4, 0.08   # доска
+W, H, D = 1.0, 3.3, 0.08   # доска инвентаря: шапка + 5 рядов по 2 гнезда
 TOP = H / 2
 
 def lin(c):
@@ -125,7 +125,7 @@ for k, (x, rz) in enumerate(((-0.45, 30), (-0.3, -20), (0.35, 25), (0.52, -35)))
 
 # гнёзда под вещи: 2 колонки × 3 ряда
 slots = []
-for row, z in enumerate((0.3, -0.26, -0.82)):
+for row, z in enumerate((0.84, 0.34, -0.16, -0.66, -1.16)):
     for col, x in enumerate((-0.23, 0.23)):
         parts.append(cyl("SlotRim", WOOD_DARK, (x, front - 0.012, z), 0.205, 0.03, rot=(90, 0, 0), verts=40))
         parts.append(cyl("Slot", SLOT, (x, front - 0.02, z), 0.18, 0.02, rot=(90, 0, 0), verts=40))
@@ -340,6 +340,29 @@ for fn, name in ((hud_inventory, "hud_inventory"), (hud_orders, "hud_orders"), (
         cam.rotation_euler = (math.radians(87), 0, math.radians(6))
         scene.render.filepath = os.path.join(os.path.dirname(PREVIEW), name + ".png")
         bpy.ops.render.render(write_still=True)
+
+# ---------- Нижняя плашка магазина ----------
+# Длинная доска на всю ширину экрана: слева монета и баланс, по центру — название примеряемой вещи,
+# справа — выпуклая кнопка «Купить» (отдельный объект BuyBtn: Unity красит её и «нажимает»).
+# Пустышки: CoinText, ItemText, BuyText.
+bpy.ops.wm.read_factory_settings(use_empty=True)
+BW, BH = 3.0, 0.5
+b = [box("BPlank", WOOD, (0, 0, 0), (BW, 0.08, BH), bevel=0.04)]
+for x in (-BW / 3, BW / 3):
+    b.append(box("BSeam", WOOD_DARK, (x, -0.042, 0), (0.012, 0.01, BH - 0.06)))
+b.append(cyl("BLogTop", BARK, (0, -0.01, BH / 2 + 0.02), 0.045, BW + 0.1, rot=(0, 90, 0), verts=12))
+for x in (-BW / 2 + 0.07, BW / 2 - 0.07):
+    b.append(sph("BNail", NAIL, (x, -0.05, 0), 0.022, (1, 0.5, 1)))
+b.append(sph("BMoss", MOSS, (-BW / 2 + 0.05, -0.04, BH / 2 - 0.04), 0.09, (1.3, 0.5, 0.8)))
+# монета
+b.append(cyl("Coin", GOLD_, (-BW / 2 + 0.36, -0.07, 0), 0.15, 0.05, rot=(90, 0, 0), verts=32))
+b.append(torus("CoinRim", (0.85, 0.6, 0.15), (-BW / 2 + 0.36, -0.1, 0), 0.12, 0.018, rot=(90, 0, 0)))
+plank = join(b, "Plank")
+btn = box("BuyBtn", (0.92, 0.46, 0.28), (BW / 2 - 0.55, -0.1, 0), (0.9, 0.08, 0.34), bevel=0.05)
+be = [empty("CoinText", (-BW / 2 + 0.72, -0.12, 0)), empty("ItemText", (-0.12, -0.12, 0)),
+      empty("BuyText", (BW / 2 - 0.55, -0.16, 0))]
+for e in be: e.parent = plank
+export(os.path.join(OUT, "shop_plank.fbx"), [plank, btn] + be)
 
 # ---------- Кольцо подсветки (цвет задаёт Unity) ----------
 bpy.ops.wm.read_factory_settings(use_empty=True)
